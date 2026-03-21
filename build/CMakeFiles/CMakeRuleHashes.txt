@@ -1,0 +1,4 @@
+# Hashes of file build rules.
+a9326510f43ead25283b20107c767c06 DrumSampler2_artefacts/JuceLibraryCode/DrumSampler2_AU/PkgInfo
+5d20a70b4e0413a93d34f43ab71d5273 DrumSampler2_artefacts/JuceLibraryCode/DrumSampler2_Standalone/PkgInfo
+0b9381d990ded1d39bf000d835fa12df DrumSampler2_artefacts/JuceLibraryCode/DrumSampler2_VST3/PkgInfo

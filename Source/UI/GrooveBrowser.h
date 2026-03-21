@@ -1,0 +1,119 @@
+#pragma once
+#include <juce_gui_basics/juce_gui_basics.h>
+#include "../Grooves/GrooveLibrary.h"
+#include "../Grooves/MIDIPlayer.h"
+
+class GrooveBrowser : public juce::Component,
+                      private juce::Timer
+{
+public:
+    GrooveBrowser();
+    
+    void paint(juce::Graphics& g) override;
+    void resized() override;
+    
+    void setGrooveLibrary(GrooveLibrary* library);
+    void setMIDIPlayer(MIDIPlayer* player);
+    
+private:
+    void timerCallback() override;
+    void updateGrooveList();
+    void filterGrooves();
+    void previewGroove(const GrooveMetadata* groove);
+    
+    GrooveLibrary* grooveLibrary = nullptr;
+    MIDIPlayer* midiPlayer = nullptr;
+    
+    juce::TextEditor searchBox;
+    juce::Label searchLabel;
+    
+    juce::ComboBox categoryFilter;
+    juce::Label categoryLabel;
+    
+    juce::Slider tempoMinSlider;
+    juce::Slider tempoMaxSlider;
+    juce::Label tempoLabel;
+    
+    juce::ToggleButton favoritesOnly;
+    
+    juce::ListBox grooveList;
+    juce::TextButton scanButton{"Scan Folders"};
+    juce::TextButton previewButton{"Preview"};
+    juce::TextButton addToTimelineButton{"Add to Timeline"};
+    
+    juce::Label statusLabel;
+    
+    std::vector<GrooveMetadata> filteredGrooves;
+    const GrooveMetadata* selectedGroove = nullptr;
+    
+    juce::Colour bgColour{0xFF2A2A2A};
+    juce::Colour listBgColour{0xFF1A1A1A};
+    juce::Colour accentColour{0xFFE8A020};
+    
+    class GrooveListModel : public juce::ListBoxModel
+    {
+    public:
+        GrooveListModel(GrooveBrowser& owner) : browser(owner) {}
+        
+        int getNumRows() override
+        {
+            return static_cast<int>(browser.filteredGrooves.size());
+        }
+        
+        void paintListBoxItem(int rowNumber, juce::Graphics& g,
+                            int width, int height, bool rowIsSelected) override
+        {
+            if (rowNumber < 0 || rowNumber >= static_cast<int>(browser.filteredGrooves.size()))
+                return;
+            
+            const auto& groove = browser.filteredGrooves[rowNumber];
+            
+            if (rowIsSelected)
+                g.fillAll(browser.accentColour.withAlpha(0.3f));
+            else if (rowNumber % 2 == 0)
+                g.fillAll(juce::Colour(0xFF252525));
+            
+            g.setColour(juce::Colours::white);
+            g.setFont(14.0f);
+            
+            auto textArea = juce::Rectangle<int>(5, 0, width - 10, height);
+            g.drawText(groove.name, textArea.removeFromLeft(width / 2), 
+                      juce::Justification::centredLeft, true);
+            
+            g.setColour(juce::Colours::lightgrey);
+            g.setFont(12.0f);
+            g.drawText(juce::String(groove.tempoBPM) + " BPM", 
+                      textArea.removeFromLeft(80), 
+                      juce::Justification::centredLeft, true);
+            
+            if (groove.isFavorite)
+            {
+                g.setColour(juce::Colours::gold);
+                g.fillEllipse(width - 25.0f, height / 2.0f - 5.0f, 10.0f, 10.0f);
+            }
+        }
+        
+        void listBoxItemClicked(int row, const juce::MouseEvent&) override
+        {
+            if (row >= 0 && row < static_cast<int>(browser.filteredGrooves.size()))
+            {
+                browser.selectedGroove = &browser.filteredGrooves[row];
+            }
+        }
+        
+        void listBoxItemDoubleClicked(int row, const juce::MouseEvent&) override
+        {
+            if (row >= 0 && row < static_cast<int>(browser.filteredGrooves.size()))
+            {
+                browser.previewGroove(&browser.filteredGrooves[row]);
+            }
+        }
+        
+    private:
+        GrooveBrowser& browser;
+    };
+    
+    std::unique_ptr<GrooveListModel> listModel;
+    
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GrooveBrowser)
+};
