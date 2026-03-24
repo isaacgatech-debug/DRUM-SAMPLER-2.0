@@ -6,11 +6,14 @@ DrumSampler2Processor::DrumSampler2Processor()
                      .withInput("Input", juce::AudioChannelSet::stereo(), true)
                      .withOutput("Output", juce::AudioChannelSet::stereo(), true))
 {
-    const int drumNotes[] = {36, 38, 42, 43, 45, 48, 49, 50, 51, 55, 57};
-    const char* drumNames[] = {"Kick", "Snare", "Hi-Hat", "Tom 4", "Tom 3", 
-                               "Tom 2", "Crash 1", "Tom 1", "Ride", "Splash", "Crash 2"};
+    // Initialize 12 mixer channels matching the UI inputs
+    // These map to MIDI notes and drum inputs
+    const int drumNotes[] = {36, 36, 38, 38, 48, 45, 50, 42, 42, 42, 49, 51};  // MIDI notes
+    const char* drumNames[] = {"Kick In", "Kick Out", "Snare Top", "Snare Bottom",
+                               "Tom 1", "Tom 2", "Tom 3", "OVH L", "OVH R",
+                               "Hat", "RM L", "RM R"};
     
-    for (int i = 0; i < 11; ++i)
+    for (int i = 0; i < 12; ++i)
     {
         mixerChannels.push_back(
             std::make_unique<MixerChannel>(drumNotes[i], drumNames[i])
@@ -159,6 +162,13 @@ void DrumSampler2Processor::loadSamplesFromFolder(const juce::File& folder)
 MixerChannel& DrumSampler2Processor::getMixerChannel(int index)
 {
     return *mixerChannels[juce::jlimit(0, static_cast<int>(mixerChannels.size()) - 1, index)];
+}
+
+MixerChannel* DrumSampler2Processor::getMixerChannelForInput(int inputIndex)
+{
+    if (inputIndex >= 0 && inputIndex < static_cast<int>(mixerChannels.size()))
+        return mixerChannels[inputIndex].get();
+    return nullptr;
 }
 
 void DrumSampler2Processor::triggerNote(int midiNote, int velocity)

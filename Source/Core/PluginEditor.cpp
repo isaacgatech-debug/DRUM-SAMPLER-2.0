@@ -4,17 +4,19 @@ DrumSampler2Editor::DrumSampler2Editor(DrumSampler2Processor& p)
     : AudioProcessorEditor(&p), processor(p)
 {
     setSize(650, 750);
+    setResizable(true, true);
+    setResizeLimits(500, 600, 1600, 1200);
 
     auto resourcesFolder = juce::File::getSpecialLocation(juce::File::currentExecutableFile)
         .getParentDirectory().getChildFile("Resources");
-    auto logoFile = resourcesFolder.getChildFile("gridlock-logo.png");
+    auto logoFile = resourcesFolder.getChildFile("LOGO/Gridlock Logo - White.png");
     
     if (logoFile.existsAsFile())
     {
         logoImage = juce::ImageFileFormat::loadFrom(logoFile);
     }
 
-    titleLabel.setText("DRUM SAMPLER 2", juce::dontSendNotification);
+    titleLabel.setText("DRUM TECH", juce::dontSendNotification);
     titleLabel.setFont(juce::FontOptions(24.0f, juce::Font::bold));
     titleLabel.setColour(juce::Label::textColourId, textCol);
     addAndMakeVisible(titleLabel);
@@ -35,7 +37,7 @@ DrumSampler2Editor::DrumSampler2Editor(DrumSampler2Processor& p)
     ErrorLogger::getInstance().addListener(this);
     updateBugsButton();
     
-    LOG_INFO("Drum Sampler 2.0 initialized");
+    LOG_INFO("Drum Tech initialized");
 
     tabKit.setColour(juce::TextButton::buttonColourId, accent);
     tabKit.onClick = [this] { activeTab = 0; resized(); };
@@ -53,16 +55,12 @@ DrumSampler2Editor::DrumSampler2Editor(DrumSampler2Processor& p)
     tabTrigger.onClick = [this] { activeTab = 3; resized(); };
     addAndMakeVisible(tabTrigger);
 
-    tabRouting.setColour(juce::TextButton::buttonColourId, header);
-    tabRouting.onClick = [this] { activeTab = 4; resized(); };
-    addAndMakeVisible(tabRouting);
-
     kitView.setProcessor(&processor);
+    mixerView.setProcessor(&processor);
     addAndMakeVisible(kitView);
     addAndMakeVisible(grooveBrowser);
     addAndMakeVisible(mixerView);
     addAndMakeVisible(triggerUI);
-    addAndMakeVisible(routingView);
 
     updateStatus();
     
@@ -108,30 +106,26 @@ void DrumSampler2Editor::resized()
     statusLabel.setBounds(headerArea.reduced(10));
     
     auto tabArea = area.removeFromTop(40);
-    int tabWidth = tabArea.getWidth() / 5;
+    int tabWidth = tabArea.getWidth() / 4;
     tabKit.setBounds(tabArea.removeFromLeft(tabWidth));
     tabGrooves.setBounds(tabArea.removeFromLeft(tabWidth));
     tabMixer.setBounds(tabArea.removeFromLeft(tabWidth));
-    tabTrigger.setBounds(tabArea.removeFromLeft(tabWidth));
-    tabRouting.setBounds(tabArea);
+    tabTrigger.setBounds(tabArea);
     
-    tabKit.setColour(juce::TextButton::buttonColourId, activeTab == 0 ? accent : header);
-    tabGrooves.setColour(juce::TextButton::buttonColourId, activeTab == 1 ? accent : header);
-    tabMixer.setColour(juce::TextButton::buttonColourId, activeTab == 2 ? accent : header);
-    tabTrigger.setColour(juce::TextButton::buttonColourId, activeTab == 3 ? accent : header);
-    tabRouting.setColour(juce::TextButton::buttonColourId, activeTab == 4 ? accent : header);
+    tabKit.setColour(juce::TextButton::buttonColourId, activeTab == 0 ? accent : juce::Colour(0xFF2A2A2A));
+    tabGrooves.setColour(juce::TextButton::buttonColourId, activeTab == 1 ? accent : juce::Colour(0xFF2A2A2A));
+    tabMixer.setColour(juce::TextButton::buttonColourId, activeTab == 2 ? accent : juce::Colour(0xFF2A2A2A));
+    tabTrigger.setColour(juce::TextButton::buttonColourId, activeTab == 3 ? accent : juce::Colour(0xFF2A2A2A));
     
     kitView.setBounds(area);
     grooveBrowser.setBounds(area);
     mixerView.setBounds(area);
     triggerUI.setBounds(area);
-    routingView.setBounds(area);
     
     kitView.setVisible(activeTab == 0 && !debugConsoleVisible);
     grooveBrowser.setVisible(activeTab == 1 && !debugConsoleVisible);
     mixerView.setVisible(activeTab == 2 && !debugConsoleVisible);
     triggerUI.setVisible(activeTab == 3 && !debugConsoleVisible);
-    routingView.setVisible(activeTab == 4 && !debugConsoleVisible);
     
     if (debugConsole && debugConsoleVisible)
     {

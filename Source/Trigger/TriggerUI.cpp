@@ -1,16 +1,17 @@
 #include "TriggerUI.h"
+#include "DrumClassifier.h"
 #include <juce_audio_formats/juce_audio_formats.h>
 
 TriggerUI::TriggerUI()
 {
     addAndMakeVisible(loadButton);
     loadButton.onClick = [this] { 
-        auto chooser = std::make_shared<juce::FileChooser>("Select audio file", juce::File(), "*.wav;*.aif;*.mp3");
+        auto chooser = std::make_shared<juce::FileChooser>("Select audio file", juce::File(), "*.wav;*.aif;*.aiff;*.mp3");
         chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
             [this, chooser](const juce::FileChooser& fc) {
                 auto file = fc.getResult();
                 if (file.existsAsFile())
-                    loadAudioFile(file);
+                    showDrumTypeSelector(file);
             });
     };
     
@@ -57,6 +58,11 @@ TriggerUI::TriggerUI()
     statusLabel.setText("Drop audio file or click Load Audio", juce::dontSendNotification);
     statusLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(statusLabel);
+    
+    fileInfoLabel.setText("", juce::dontSendNotification);
+    fileInfoLabel.setJustificationType(juce::Justification::centred);
+    fileInfoLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+    addAndMakeVisible(fileInfoLabel);
 }
 
 void TriggerUI::paint(juce::Graphics& g)
@@ -64,25 +70,45 @@ void TriggerUI::paint(juce::Graphics& g)
     g.fillAll(bgColour);
     
     auto bounds = getLocalBounds();
-    auto waveformArea = bounds.removeFromTop(bounds.getHeight() - 150).reduced(10);
+    auto waveformArea = bounds.removeFromTop(bounds.getHeight() - 180).reduced(10);
     
-    if (audioBuffer.getNumSamples() > 0)
+    // Draw drag highlight if dragging over
+    if (isDragOver)
     {
+        g.setColour(dragHighlightColour.withAlpha(0.3f));
+        g.fillRect(waveformArea);
+        g.setColour(dragHighlightColour);
+        g.drawRect(waveformArea, 2);
+        g.drawText("Drop audio file here", waveformArea, juce::Justification::centred);
+    }
+    else if (audioBuffer.getNumSamples() > 0)
+    {
+        // Draw waveform background
+        g.setColour(juce::Colour(0xFF1E1E1E));
+        g.fillRect(waveformArea);
+        g.setColour(juce::Colours::grey.withAlpha(0.3f));
+        g.drawRect(waveformArea);
+        
         drawWaveform(g, waveformArea);
         drawTriggerMarkers(g, waveformArea);
     }
     else
     {
+        g.setColour(juce::Colours::grey.withAlpha(0.5f));
+        g.drawRect(waveformArea, 1);
         g.setColour(juce::Colours::grey);
-        g.drawRect(waveformArea);
-        g.drawText("No audio loaded", waveformArea, juce::Justification::centred);
+        g.drawText("Drag & drop .wav, .aif, or .mp3 file here", 
+                   waveformArea, juce::Justification::centred);
+        g.setFont(12.0f);
+        g.drawText("or click Load Audio to browse", 
+                   waveformArea.withTrimmedTop(20), juce::Justification::centred);
     }
 }
 
 void TriggerUI::resized()
 {
     auto bounds = getLocalBounds();
-    bounds.removeFromTop(bounds.getHeight() - 150);
+    bounds.removeFromTop(bounds.getHeight() - 180);
     
     auto controlArea = bounds.reduced(10);
     
@@ -103,7 +129,10 @@ void TriggerUI::resized()
     bleedLabel.setBounds(bleedArea.removeFromLeft(150));
     bleedSlider.setBounds(bleedArea);
     
-    controlArea.removeFromTop(10);
+    controlArea.removeFromTop(5);
+    fileInfoLabel.setBounds(controlArea.removeFromTop(20));
+    
+    controlArea.removeFromTop(5);
     statusLabel.setBounds(controlArea.removeFromTop(30));
 }
 
@@ -113,18 +142,72 @@ bool TriggerUI::isInterestedInFileDrag(const juce::StringArray& files)
     {
         if (file.endsWithIgnoreCase(".wav") || 
             file.endsWithIgnoreCase(".aif") ||
+            file.endsWithIgnoreCase(".aiff") ||
             file.endsWithIgnoreCase(".mp3"))
             return true;
     }
     return false;
 }
 
+void TriggerUI::fileDragEnter(const juce::StringArray& files, int, int)
+{
+    if (isInterestedInFileDrag(files))
+    {
+        isDragOver = true;
+        repaint();
+    }
+}
+
+void TriggerUI::fileDragExit(const juce::StringArray&)
+{
+    isDragOver = false;
+    repaint();
+}
+
 void TriggerUI::filesDropped(const juce::StringArray& files, int, int)
 {
+    isDragOver = false;
     if (!files.isEmpty())
     {
-        loadAudioFile(juce::File(files[0]));
+        showDrumTypeSelector(juce::File(files[0]));
     }
+}
+
+void TriggerUI::showDrumTypeSelector(const juce::File& file)
+{
+    auto* alert = new juce::AlertWindow("Select Drum Type", 
+                                        "Which drum type would you like to detect in: " + file.getFileName() + "?",
+                                        juce::AlertWindow::QuestionIcon);
+    
+    alert->addButton("Kick (Bass Drum)", 1);
+    alert->addButton("Snare", 2);
+    alert->addButton("Hi-Hat", 3);
+    alert->addButton("Tom", 4);
+    alert->addButton("Crash", 5);
+    alert->addButton("Ride", 6);
+    alert->addButton("All Drums (Auto)", 7);
+    alert->addButton("Cancel", 0);
+    
+    alert->enterModalState(true, juce::ModalCallbackFunction::create([this, file](int result) {
+        if (result == 0) return; // Cancelled
+        
+        switch (result)
+        {
+            case 1: targetDrumType = DrumType::Kick; break;
+            case 2: targetDrumType = DrumType::Snare; break;
+            case 3: targetDrumType = DrumType::HiHat; break;
+            case 4: targetDrumType = DrumType::Tom; break;
+            case 5: targetDrumType = DrumType::Crash; break;
+            case 6: targetDrumType = DrumType::Ride; break;
+            case 7: targetDrumType = DrumType::Unknown; break; // Auto detect all
+            default: targetDrumType = DrumType::Unknown; break;
+        }
+        
+        if (triggerEngine)
+            triggerEngine->setTargetDrumType(targetDrumType);
+        
+        loadAudioFile(file);
+    }), true);
 }
 
 void TriggerUI::loadAudioFile(const juce::File& file)
@@ -139,11 +222,45 @@ void TriggerUI::loadAudioFile(const juce::File& file)
         audioBuffer.setSize(static_cast<int>(reader->numChannels),
                            static_cast<int>(reader->lengthInSamples));
         reader->read(&audioBuffer, 0, static_cast<int>(reader->lengthInSamples), 0, true, true);
+        audioSampleRate = reader->sampleRate;
         
         processButton.setEnabled(true);
-        statusLabel.setText("Audio loaded: " + file.getFileName(), juce::dontSendNotification);
+        
+        DrumClassifier classifier;
+        juce::String drumTypeName;
+        switch (targetDrumType)
+        {
+            case DrumType::Kick: drumTypeName = "Kick"; break;
+            case DrumType::Snare: drumTypeName = "Snare"; break;
+            case DrumType::HiHat: drumTypeName = "Hi-Hat"; break;
+            case DrumType::Tom: drumTypeName = "Tom"; break;
+            case DrumType::Crash: drumTypeName = "Crash"; break;
+            case DrumType::Ride: drumTypeName = "Ride"; break;
+            default: drumTypeName = "All drums (auto-detect)"; break;
+        }
+        
+        statusLabel.setText("Loaded: " + file.getFileName(), juce::dontSendNotification);
+        fileInfoLabel.setText("Target: " + drumTypeName + " | " + 
+                              formatDuration(audioBuffer.getNumSamples(), audioSampleRate) + " | " +
+                              juce::String(audioSampleRate, 0) + " Hz | " +
+                              juce::String(audioBuffer.getNumChannels()) + " ch",
+                              juce::dontSendNotification);
         repaint();
     }
+    else
+    {
+        statusLabel.setText("Error: Could not load " + file.getFileName(), juce::dontSendNotification);
+        fileInfoLabel.setText("", juce::dontSendNotification);
+    }
+}
+
+juce::String TriggerUI::formatDuration(double samples, double sampleRate)
+{
+    double seconds = samples / sampleRate;
+    int mins = static_cast<int>(seconds) / 60;
+    int secs = static_cast<int>(seconds) % 60;
+    int ms = static_cast<int>((seconds - static_cast<int>(seconds)) * 1000);
+    return juce::String::formatted("%02d:%02d.%03d", mins, secs, ms);
 }
 
 void TriggerUI::processCurrentFile()
@@ -157,7 +274,7 @@ void TriggerUI::processCurrentFile()
     juce::WavAudioFormat wavFormat;
     std::unique_ptr<juce::AudioFormatWriter> writer(
         wavFormat.createWriterFor(new juce::FileOutputStream(tempFile),
-                                 44100.0, audioBuffer.getNumChannels(), 16, {}, 0));
+                                 audioSampleRate, audioBuffer.getNumChannels(), 16, {}, 0));
     
     if (writer != nullptr)
     {
@@ -186,25 +303,76 @@ void TriggerUI::setBleedSuppression(float amount)
 
 void TriggerUI::drawWaveform(juce::Graphics& g, const juce::Rectangle<int>& area)
 {
-    g.setColour(waveformColour);
+    if (audioBuffer.getNumSamples() == 0 || area.getWidth() <= 0)
+        return;
     
     const int numSamples = audioBuffer.getNumSamples();
     const int width = area.getWidth();
     const float height = static_cast<float>(area.getHeight());
     const float centerY = area.getY() + height / 2.0f;
     
-    juce::Path waveformPath;
-    waveformPath.startNewSubPath(static_cast<float>(area.getX()), centerY);
+    // Draw center line
+    g.setColour(juce::Colours::grey.withAlpha(0.3f));
+    g.drawHorizontalLine(static_cast<int>(centerY), static_cast<float>(area.getX()), static_cast<float>(area.getRight()));
+    
+    // Draw waveform with proper scaling
+    g.setColour(waveformColour);
+    
+    juce::Path minPath, maxPath;
+    bool first = true;
+    
+    // Calculate samples per pixel for efficient drawing
+    const int samplesPerPixel = juce::jmax(1, numSamples / width);
     
     for (int x = 0; x < width; ++x)
     {
-        int sampleIndex = (x * numSamples) / width;
-        float sample = audioBuffer.getSample(0, sampleIndex);
-        float y = centerY - (sample * height * 0.4f);
-        waveformPath.lineTo(static_cast<float>(area.getX() + x), y);
+        int startSample = (x * numSamples) / width;
+        int endSample = juce::jmin(startSample + samplesPerPixel, numSamples);
+        
+        float minSample = 0.0f;
+        float maxSample = 0.0f;
+        
+        // Find min/max in this pixel's range
+        for (int ch = 0; ch < audioBuffer.getNumChannels(); ++ch)
+        {
+            const float* channelData = audioBuffer.getReadPointer(ch);
+            for (int s = startSample; s < endSample; ++s)
+            {
+                float sample = channelData[s];
+                minSample = juce::jmin(minSample, sample);
+                maxSample = juce::jmax(maxSample, sample);
+            }
+        }
+        
+        float xPos = static_cast<float>(area.getX() + x);
+        float minY = centerY - (minSample * height * 0.45f);
+        float maxY = centerY - (maxSample * height * 0.45f);
+        
+        if (first)
+        {
+            minPath.startNewSubPath(xPos, minY);
+            maxPath.startNewSubPath(xPos, maxY);
+            first = false;
+        }
+        else
+        {
+            minPath.lineTo(xPos, minY);
+            maxPath.lineTo(xPos, maxY);
+        }
     }
     
-    g.strokePath(waveformPath, juce::PathStrokeType(1.0f));
+    // Create filled waveform
+    juce::Path waveformPath = minPath;
+    waveformPath.lineTo(static_cast<float>(area.getRight()), centerY);
+    waveformPath.lineTo(static_cast<float>(area.getX()), centerY);
+    waveformPath.closeSubPath();
+    
+    g.setColour(waveformColour.withAlpha(0.3f));
+    g.fillPath(waveformPath);
+    
+    g.setColour(waveformColour);
+    g.strokePath(minPath, juce::PathStrokeType(1.0f));
+    g.strokePath(maxPath, juce::PathStrokeType(1.0f));
 }
 
 void TriggerUI::drawTriggerMarkers(juce::Graphics& g, const juce::Rectangle<int>& area)
@@ -217,11 +385,29 @@ void TriggerUI::drawTriggerMarkers(juce::Graphics& g, const juce::Rectangle<int>
     for (const auto& trigger : triggerResults)
     {
         float x = area.getX() + (static_cast<float>(trigger.timeInSamples) / audioBuffer.getNumSamples()) * area.getWidth();
+        
+        // Draw vertical trigger line
         g.drawVerticalLine(static_cast<int>(x), static_cast<float>(area.getY()), 
                           static_cast<float>(area.getBottom()));
         
-        g.drawText(juce::String(trigger.midiNote), 
-                  static_cast<int>(x) - 10, area.getY(), 20, 20,
+        // Draw drum type label above the line
+        juce::String label;
+        switch (trigger.drumType)
+        {
+            case DrumType::Kick: label = "K"; break;
+            case DrumType::Snare: label = "S"; break;
+            case DrumType::HiHat: label = "H"; break;
+            case DrumType::Tom: label = "T"; break;
+            case DrumType::Crash: label = "C"; break;
+            case DrumType::Ride: label = "R"; break;
+            default: label = juce::String(trigger.midiNote); break;
+        }
+        
+        g.setColour(triggerColour.withAlpha(0.8f));
+        g.fillEllipse(x - 8, static_cast<float>(area.getY()) + 5, 16, 16);
+        g.setColour(juce::Colours::black);
+        g.drawText(label, static_cast<int>(x) - 10, area.getY() + 5, 20, 16,
                   juce::Justification::centred);
+        g.setColour(triggerColour);
     }
 }

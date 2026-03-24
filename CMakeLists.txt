@@ -9,12 +9,12 @@ add_subdirectory(/tmp/JUCE-8.0.4 ${CMAKE_BINARY_DIR}/JUCE)
 
 # Define plugin
 juce_add_plugin(DrumSampler2
-    COMPANY_NAME "DrumSampler"
+    COMPANY_NAME "Gridlock"
     PLUGIN_MANUFACTURER_CODE Dsmp
     PLUGIN_CODE Ds2p
     FORMATS AU VST3 Standalone
-    PRODUCT_NAME "Drum Sampler 2"
-    BUNDLE_ID "com.drumsampler.drumsampler2"
+    PRODUCT_NAME "Drum Tech"
+    BUNDLE_ID "com.gridlock.drumtech"
     
     IS_SYNTH TRUE
     NEEDS_MIDI_INPUT TRUE
@@ -30,7 +30,7 @@ juce_add_plugin(DrumSampler2
 # Binary resources
 juce_add_binary_data(DrumSampler2Resources
     SOURCES
-        Resources/drum-backdrop.png
+        Resources/Backdrops/drum-backdrop.png
 )
 
 # Source files
@@ -90,6 +90,9 @@ target_sources(DrumSampler2 PRIVATE
     Source/UI/InteractiveDrumPad.cpp
     Source/UI/GrooveBrowser.cpp
     Source/UI/MixerView.cpp
+    Source/UI/ChannelStrip.cpp
+    Source/UI/AnalogKnob.cpp
+    Source/UI/VUMeter.cpp
     Source/UI/RoutingView.cpp
     Source/UI/PluginBrowser.cpp
 )

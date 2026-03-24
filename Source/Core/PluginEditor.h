@@ -6,7 +6,6 @@
 #include "../UI/MixerView.h"
 #include "../UI/GrooveBrowser.h"
 #include "../Trigger/TriggerUI.h"
-#include "../UI/RoutingView.h"
 #include "DebugConsole.h"
 #include "ErrorLogger.h"
 
@@ -52,13 +51,11 @@ private:
     juce::TextButton tabGrooves{"GROOVES"};
     juce::TextButton tabMixer{"MIXER"};
     juce::TextButton tabTrigger{"TRIGGER"};
-    juce::TextButton tabRouting{"ROUTING"};
 
     DrumKitView kitView;
     GrooveBrowser grooveBrowser;
     MixerView mixerView;
     TriggerUI triggerUI;
-    RoutingView routingView;
     
     std::unique_ptr<DebugConsole> debugConsole;
     bool debugConsoleVisible = false;
