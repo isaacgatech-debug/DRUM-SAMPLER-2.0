@@ -43,6 +43,7 @@ private:
     DrumSampler2Processor& processor;
 
     juce::Label titleLabel;
+    juce::Image logoImage;
     juce::TextButton loadButton{"LOAD SAMPLES"};
     juce::TextButton bugsButton{"BUGS"};
     juce::Label statusLabel;

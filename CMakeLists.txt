@@ -27,6 +27,12 @@ juce_add_plugin(DrumSampler2
     AU_MAIN_TYPE "kAudioUnitType_MusicDevice"
 )
 
+# Binary resources
+juce_add_binary_data(DrumSampler2Resources
+    SOURCES
+        Resources/drum-backdrop.png
+)
+
 # Source files
 target_sources(DrumSampler2 PRIVATE
     # Core
@@ -107,8 +113,14 @@ target_link_libraries(DrumSampler2 PRIVATE
     juce::juce_audio_processors
     juce::juce_gui_basics
     juce::juce_dsp
+    DrumSampler2Resources
     PUBLIC
     juce::juce_recommended_config_flags
     juce::juce_recommended_lto_flags
     juce::juce_recommended_warning_flags
+)
+
+# Include binary data headers
+target_include_directories(DrumSampler2 PRIVATE 
+    ${CMAKE_BINARY_DIR}/juce_binarydata_DrumSampler2Resources/JuceLibraryCode
 )

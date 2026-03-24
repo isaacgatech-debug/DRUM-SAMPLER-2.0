@@ -5,6 +5,15 @@ DrumSampler2Editor::DrumSampler2Editor(DrumSampler2Processor& p)
 {
     setSize(650, 750);
 
+    auto resourcesFolder = juce::File::getSpecialLocation(juce::File::currentExecutableFile)
+        .getParentDirectory().getChildFile("Resources");
+    auto logoFile = resourcesFolder.getChildFile("gridlock-logo.png");
+    
+    if (logoFile.existsAsFile())
+    {
+        logoImage = juce::ImageFileFormat::loadFrom(logoFile);
+    }
+
     titleLabel.setText("DRUM SAMPLER 2", juce::dontSendNotification);
     titleLabel.setFont(juce::FontOptions(24.0f, juce::Font::bold));
     titleLabel.setColour(juce::Label::textColourId, textCol);
@@ -76,6 +85,13 @@ void DrumSampler2Editor::paint(juce::Graphics& g)
     g.setColour(header);
     g.fillRect(0, 0, getWidth(), 60);
     
+    if (logoImage.isValid())
+    {
+        auto logoArea = juce::Rectangle<int>(10, 10, 150, 40);
+        g.drawImage(logoImage, logoArea.toFloat(), 
+                   juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize);
+    }
+    
     g.setColour(header);
     g.fillRect(0, 60, getWidth(), 40);
 }
@@ -85,7 +101,8 @@ void DrumSampler2Editor::resized()
     auto area = getLocalBounds();
     
     auto headerArea = area.removeFromTop(60);
-    titleLabel.setBounds(headerArea.removeFromLeft(300).reduced(10));
+    headerArea.removeFromLeft(170);
+    titleLabel.setBounds(headerArea.removeFromLeft(200).reduced(10));
     bugsButton.setBounds(headerArea.removeFromRight(80).reduced(10));
     loadButton.setBounds(headerArea.removeFromRight(150).reduced(10));
     statusLabel.setBounds(headerArea.reduced(10));

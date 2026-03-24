@@ -1,0 +1,58 @@
+# Build directories
+build/
+cmake-build-*/
+out/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.code-workspace
+.DS_Store
+
+# Compiled binaries and packages
+*.app
+*.component
+*.vst3
+*.zip
+*.dmg
+*.pkg
+DrumSampler2_Package/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Object files and libraries
+*.o
+*.a
+*.so
+*.dylib
+*.lib
+*.dll
+
+# Executables
+*.exe
+*.out
+juce_vst3_helper
+
+# JUCE build artifacts
+JuceLibraryCode/
+*_artefacts/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Temporary files
+*.swp
+*.swo
+*~
+.*.sw?
+
+# Logs
+*.log
