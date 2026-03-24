@@ -3,7 +3,7 @@
 DrumSampler2Editor::DrumSampler2Editor(DrumSampler2Processor& p)
     : AudioProcessorEditor(&p), processor(p)
 {
-    setSize(1000, 700);
+    setSize(650, 750);
 
     titleLabel.setText("DRUM SAMPLER 2", juce::dontSendNotification);
     titleLabel.setFont(juce::FontOptions(24.0f, juce::Font::bold));
@@ -59,6 +59,9 @@ DrumSampler2Editor::DrumSampler2Editor(DrumSampler2Processor& p)
     
     // Start timer to poll for MIDI events (30 FPS)
     startTimer(33);
+    
+    // Ensure initial layout is applied and KIT tab is visible
+    resized();
 }
 
 DrumSampler2Editor::~DrumSampler2Editor()

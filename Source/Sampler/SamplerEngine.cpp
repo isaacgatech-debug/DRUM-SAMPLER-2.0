@@ -96,13 +96,18 @@ void SamplerEngine::loadSamplesFromFolder(const juce::File& folder)
 
 void SamplerEngine::prepareToPlay(double sampleRate, int blockSize)
 {
+    DBG("*** SamplerEngine::prepareToPlay ENTER - sampleRate=" << sampleRate << " ***");
     currentSampleRate = sampleRate;
+    for (int i = 0; i < MAX_VOICES; ++i)
+    {
+        voices[i].setSampleRate(sampleRate);
+        DBG("*** Voice " << i << " sampleRate set to " << sampleRate << " ***");
+    }
+    DBG("*** SamplerEngine::prepareToPlay EXIT ***");
 }
 
 void SamplerEngine::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
 {
-    buffer.clear();
-    
     bool hadMidiNote = false;
     
     for (const auto metadata : midi)
@@ -151,12 +156,15 @@ void SamplerEngine::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuf
 
 void SamplerEngine::noteOn(int midiNote, int velocity)
 {
-    DBG("MIDI Note On: " << midiNote << " velocity: " << velocity);
+    DBG("*** SamplerEngine::noteOn ENTER - note: " << midiNote << ", velocity: " << velocity << " ***");
+    DBG("*** currentSampleRate: " << currentSampleRate << " ***");
+    DBG("*** Total samples loaded: " << samples.size() << " ***");
     
     std::vector<const DrumSample*> candidates;
     
     for (const auto& sample : samples)
     {
+        DBG("*** Checking sample: note=" << sample.midiNote << " vel=" << sample.velLow << "-" << sample.velHigh << " ***");
         if (sample.midiNote == midiNote &&
             velocity >= sample.velLow &&
             velocity <= sample.velHigh)
@@ -165,32 +173,41 @@ void SamplerEngine::noteOn(int midiNote, int velocity)
         }
     }
     
+    DBG("*** Found " << candidates.size() << " candidate samples ***");
+    
     if (candidates.empty())
     {
-        DBG("No sample found for MIDI note " << midiNote);
+        DBG("*** ERROR: No sample found for MIDI note " << midiNote << " ***");
         return;
     }
-    
-    DBG("Found " << candidates.size() << " candidate samples for note " << midiNote);
     
     int rrIndex = rrCounters[midiNote] % static_cast<int>(candidates.size());
     const DrumSample* selectedSample = candidates[rrIndex];
     rrCounters[midiNote]++;
     
+    DBG("*** Selected sample with " << selectedSample->buffer.getNumSamples() << " samples at " << selectedSample->sampleRate << "Hz ***");
+    
     DrumVoice* freeVoice = nullptr;
-    for (auto& voice : voices)
+    int voiceIndex = -1;
+    for (int i = 0; i < MAX_VOICES; ++i)
     {
-        if (!voice.isActive())
+        if (!voices[i].isActive())
         {
-            freeVoice = &voice;
+            freeVoice = &voices[i];
+            voiceIndex = i;
             break;
         }
     }
     
     if (freeVoice == nullptr)
     {
-        DBG("No free voices, stealing voice 0");
+        DBG("*** No free voices, stealing voice 0 ***");
         freeVoice = &voices[0];
+        voiceIndex = 0;
+    }
+    else
+    {
+        DBG("*** Using voice " << voiceIndex << " ***");
     }
     
     float gain = velocity / 127.0f;
@@ -199,14 +216,9 @@ void SamplerEngine::noteOn(int midiNote, int velocity)
     if (noteToChannel.find(midiNote) != noteToChannel.end())
         channel = noteToChannel[midiNote];
     
-    DBG("Triggering voice with gain " << gain << " on channel " << channel);
+    DBG("*** Triggering voice " << voiceIndex << " with gain " << gain << " ***");
     freeVoice->trigger(selectedSample, gain, channel);
-    
-    if (pitchSettings.find(midiNote) != pitchSettings.end())
-        freeVoice->setPitch(pitchSettings[midiNote]);
-    
-    if (velocityCurves.find(midiNote) != velocityCurves.end())
-        freeVoice->setVelocityCurve(velocityCurves[midiNote]);
+    DBG("*** Voice " << voiceIndex << " isActive after trigger: " << freeVoice->isActive() << " ***");
 }
 
 void SamplerEngine::noteOff(int midiNote)

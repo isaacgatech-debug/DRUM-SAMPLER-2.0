@@ -1,6 +1,7 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_basics/juce_audio_basics.h>
+#include "BinaryData.h"
 
 class DrumSampler2Processor;
 
@@ -14,145 +15,105 @@ public:
     
     void setProcessor(DrumSampler2Processor* proc) 
     { 
-        DBG("=== DrumKitView::setProcessor called with " << (proc ? "VALID" : "NULL") << " pointer ===");
         processor = proc;
         
-        // Update all pads with the processor pointer
-        if (kickPad) { kickPad->setProcessor(proc); DBG("Set processor for KICK pad"); }
-        if (snarePad) { snarePad->setProcessor(proc); DBG("Set processor for SNARE pad"); }
-        if (hihatPad) hihatPad->setProcessor(proc);
-        if (tom1Pad) tom1Pad->setProcessor(proc);
-        if (tom2Pad) tom2Pad->setProcessor(proc);
-        if (tom3Pad) tom3Pad->setProcessor(proc);
-        if (crashPad) crashPad->setProcessor(proc);
-        if (ridePad) ridePad->setProcessor(proc);
-        if (clapPad) clapPad->setProcessor(proc);
-        if (rimPad) rimPad->setProcessor(proc);
-        if (cowbellPad) cowbellPad->setProcessor(proc);
-        
-        DBG("=== All pads updated with processor ===");
+        // Update all pieces with the processor pointer
+        if (kickPiece) kickPiece->setProcessor(proc);
+        if (snarePiece) snarePiece->setProcessor(proc);
+        if (hihatPiece) hihatPiece->setProcessor(proc);
+        if (tom1Piece) tom1Piece->setProcessor(proc);
+        if (tom2Piece) tom2Piece->setProcessor(proc);
+        if (tom3Piece) tom3Piece->setProcessor(proc);
+        if (crashPiece) crashPiece->setProcessor(proc);
+        if (crash2Piece) crash2Piece->setProcessor(proc);
+        if (ridePiece) ridePiece->setProcessor(proc);
     }
     
-    void triggerPadVisual(int midiNote)
+    void triggerPieceVisual(int midiNote)
     {
-        // Find the pad that matches this MIDI note and flash it
-        DrumPad* pad = nullptr;
+        // Find the piece that matches this MIDI note and flash it
+        DrumPiece* piece = nullptr;
         
-        if (midiNote == 36 && kickPad) pad = kickPad.get();
-        else if (midiNote == 38 && snarePad) pad = snarePad.get();
-        else if (midiNote == 42 && hihatPad) pad = hihatPad.get();
-        else if (midiNote == 45 && tom1Pad) pad = tom1Pad.get();
-        else if (midiNote == 48 && tom2Pad) pad = tom2Pad.get();
-        else if (midiNote == 50 && tom3Pad) pad = tom3Pad.get();
-        else if (midiNote == 49 && crashPad) pad = crashPad.get();
-        else if (midiNote == 51 && ridePad) pad = ridePad.get();
-        else if (midiNote == 39 && clapPad) pad = clapPad.get();
-        else if (midiNote == 37 && rimPad) pad = rimPad.get();
-        else if (midiNote == 56 && cowbellPad) pad = cowbellPad.get();
+        if (midiNote == 36 && kickPiece) piece = kickPiece.get();
+        else if (midiNote == 38 && snarePiece) piece = snarePiece.get();
+        else if (midiNote == 42 && hihatPiece) piece = hihatPiece.get();
+        else if (midiNote == 45 && tom2Piece) piece = tom2Piece.get();
+        else if (midiNote == 48 && tom1Piece) piece = tom1Piece.get();
+        else if (midiNote == 50 && tom3Piece) piece = tom3Piece.get();
+        else if (midiNote == 49 && crashPiece) piece = crashPiece.get();
+        else if (midiNote == 57 && crash2Piece) piece = crash2Piece.get();
+        else if (midiNote == 51 && ridePiece) piece = ridePiece.get();
         
-        if (pad)
+        if (piece)
         {
-            pad->flash();
+            piece->flash();
         }
     }
     
 private:
-    class DrumPad : public juce::TextButton, private juce::Timer
+    class DrumPiece : public juce::Component, private juce::Timer
     {
     public:
-        DrumPad(const juce::String& name, int note, DrumSampler2Processor* proc)
-            : juce::TextButton(name), padName(name), midiNote(note), processor(proc)
+        enum class Type { Drum, Cymbal };
+        
+        DrumPiece(const juce::String& name, int note, Type type, juce::Colour color)
+            : pieceName(name), midiNote(note), pieceType(type), baseColor(color)
         {
-            setClickingTogglesState(false);
-            onClick = [this]() { triggerNote(); };
         }
         
-        void paintButton(juce::Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
+        void paint(juce::Graphics& g) override
         {
-            auto bounds = getLocalBounds().toFloat();
-            
-            // Draw pad background with flash overlay
-            juce::Colour baseColour;
-            if (shouldDrawButtonAsDown || isDown())
-                baseColour = juce::Colour(0xFFE8A020);
-            else if (shouldDrawButtonAsHighlighted || isOver())
-                baseColour = juce::Colour(0xFFE8A020).withAlpha(0.7f);
-            else
-                baseColour = juce::Colour(0xFF3A3A3A);
-            
-            // Blend with flash color
-            if (flashAlpha > 0.0f)
-            {
-                baseColour = baseColour.interpolatedWith(juce::Colour(0xFFFFAA00), flashAlpha);
-            }
-            
-            g.setColour(baseColour);
-            g.fillRoundedRectangle(bounds, 8.0f);
-            
-            // Draw border
-            g.setColour(juce::Colour(0xFF5A5A5A));
-            g.drawRoundedRectangle(bounds, 8.0f, 2.0f);
-            
-            // Draw pad name
-            g.setColour(juce::Colours::white);
-            g.setFont(16.0f);
-            g.drawText(padName, bounds, juce::Justification::centred);
-            
-            // Draw MIDI note number
-            g.setFont(10.0f);
-            g.setColour(juce::Colours::lightgrey);
-            auto textBounds = bounds;
-            textBounds.removeFromTop(bounds.getHeight() - 20);
-            g.drawText("Note " + juce::String(midiNote), textBounds, juce::Justification::centred);
+            // Fully invisible - no visual feedback
+            juce::ignoreUnused(g);
         }
+        
+        void mouseDown(const juce::MouseEvent& e) override;
         
         void setProcessor(DrumSampler2Processor* proc)
         {
-            DBG("DrumPad '" << padName.toStdString() << "' setProcessor: " << (proc ? "VALID" : "NULL"));
             processor = proc;
         }
         
         void flash()
         {
-            // Trigger visual flash
-            flashAlpha = 1.0f;
-            startTimer(30); // Update every 30ms
+            glowAlpha = 1.0f;
+            startTimer(30);
             repaint();
         }
         
         void timerCallback() override
         {
-            flashAlpha *= 0.85f; // Fade out
-            if (flashAlpha < 0.01f)
+            glowAlpha *= 0.85f;
+            if (glowAlpha < 0.01f)
             {
-                flashAlpha = 0.0f;
+                glowAlpha = 0.0f;
                 stopTimer();
             }
             repaint();
         }
         
     private:
-        void triggerNote();
-        
-        juce::String padName;
+        juce::String pieceName;
         int midiNote;
-        DrumSampler2Processor* processor;
-        float flashAlpha = 0.0f;
+        Type pieceType;
+        juce::Colour baseColor;
+        float glowAlpha = 0.0f;
+        DrumSampler2Processor* processor = nullptr;
     };
     
     DrumSampler2Processor* processor = nullptr;
     
-    std::unique_ptr<DrumPad> kickPad;
-    std::unique_ptr<DrumPad> snarePad;
-    std::unique_ptr<DrumPad> hihatPad;
-    std::unique_ptr<DrumPad> tom1Pad;
-    std::unique_ptr<DrumPad> tom2Pad;
-    std::unique_ptr<DrumPad> tom3Pad;
-    std::unique_ptr<DrumPad> crashPad;
-    std::unique_ptr<DrumPad> ridePad;
-    std::unique_ptr<DrumPad> clapPad;
-    std::unique_ptr<DrumPad> rimPad;
-    std::unique_ptr<DrumPad> cowbellPad;
+    juce::Image backdropImage;
+    
+    std::unique_ptr<DrumPiece> kickPiece;
+    std::unique_ptr<DrumPiece> snarePiece;
+    std::unique_ptr<DrumPiece> hihatPiece;
+    std::unique_ptr<DrumPiece> tom1Piece;
+    std::unique_ptr<DrumPiece> tom2Piece;
+    std::unique_ptr<DrumPiece> tom3Piece;
+    std::unique_ptr<DrumPiece> crashPiece;
+    std::unique_ptr<DrumPiece> crash2Piece;
+    std::unique_ptr<DrumPiece> ridePiece;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrumKitView)
 };

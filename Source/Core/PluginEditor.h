@@ -24,12 +24,12 @@ public:
     
     void timerCallback() override
     {
-        // Check for MIDI notes and update pad visuals
+        // Check for MIDI notes and update piece visuals
         for (int note = 0; note < 128; ++note)
         {
             if (processor.checkAndClearMidiNote(note))
             {
-                kitView.triggerPadVisual(note);
+                kitView.triggerPieceVisual(note);
             }
         }
     }

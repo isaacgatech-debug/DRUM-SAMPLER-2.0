@@ -24,6 +24,7 @@ public:
     bool producesMidi() const override { return false; }
     bool isMidiEffect() const override { return false; }
     double getTailLengthSeconds() const override { return 2.0; }
+    bool silenceInProducesSilenceOut() const override { return false; }
 
     int getNumPrograms() override { return 1; }
     int getCurrentProgram() override { return 0; }

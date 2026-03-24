@@ -16,6 +16,9 @@ DrumSampler2Processor::DrumSampler2Processor()
             std::make_unique<MixerChannel>(drumNotes[i], drumNames[i])
         );
     }
+    
+    // Initialize with safe defaults so clicks work before host calls prepareToPlay
+    samplerEngine.prepareToPlay(44100.0, 512);
 }
 
 DrumSampler2Processor::~DrumSampler2Processor()
@@ -77,7 +80,12 @@ void DrumSampler2Processor::processBlock(juce::AudioBuffer<float>& buffer, juce:
         }
     }
     
-    samplerEngine.processBlock(buffer, midiMessages);
+    {
+        const juce::ScopedLock sl(midiLock);
+        DBG("*** Calling samplerEngine.processBlock ***");
+        samplerEngine.processBlock(buffer, midiMessages);
+        DBG("*** samplerEngine.processBlock returned ***");
+    }
     
     // Check if audio was generated
     float maxLevel = 0.0f;
@@ -95,12 +103,23 @@ void DrumSampler2Processor::processBlock(juce::AudioBuffer<float>& buffer, juce:
         DBG("*** WARNING: MIDI received but no audio generated! ***");
     }
     
-    for (auto& channel : mixerChannels)
-    {
-        channel->processAudio(buffer);
-    }
+    // TEMPORARILY DISABLED - mixer channels need per-note routing, not whole-buffer processing
+    // for (auto& channel : mixerChannels)
+    // {
+    //     DBG("*** Calling channel->processAudio ***");
+    //     channel->processAudio(buffer);
+    //     DBG("*** channel->processAudio returned ***");
+    // }
     
-    busManager.processAllBuses(buffer);
+    // DBG("*** Calling busManager.processAllBuses ***");
+    // busManager.processAllBuses(buffer);
+    // DBG("*** busManager.processAllBuses returned ***");
+    
+    // Keepalive: output an inaudible ~-200dB signal so Logic never suspends
+    // processBlock when transport is stopped and no MIDI keyboard is active.
+    // Without this, click-triggered notes queue up but never render.
+    for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+        buffer.addSample(ch, 0, 1.0e-10f);
 }
 
 juce::AudioProcessorEditor* DrumSampler2Processor::createEditor()
@@ -132,7 +151,9 @@ void DrumSampler2Processor::setStateInformation(const void* data, int sizeInByte
 void DrumSampler2Processor::loadSamplesFromFolder(const juce::File& folder)
 {
     lastLoadedFolder = folder;
+    DBG("*** Calling samplerEngine.loadSamplesFromFolder ***");
     samplerEngine.loadSamplesFromFolder(folder);
+    DBG("*** samplerEngine.loadSamplesFromFolder returned ***");
 }
 
 MixerChannel& DrumSampler2Processor::getMixerChannel(int index)
@@ -142,13 +163,17 @@ MixerChannel& DrumSampler2Processor::getMixerChannel(int index)
 
 void DrumSampler2Processor::triggerNote(int midiNote, int velocity)
 {
-    DBG("triggerNote called - note: " << midiNote << ", velocity: " << velocity);
+    DBG("*** triggerNote ENTER - note: " << midiNote << ", velocity: " << velocity << " ***");
     
-    // Queue MIDI message to be processed in audio thread
     const juce::ScopedLock sl(midiLock);
-    pendingMidiMessages.addEvent(juce::MidiMessage::noteOn(1, midiNote, (juce::uint8)velocity), 0);
+    DBG("*** triggerNote: got lock, calling samplerEngine.noteOn ***");
+    samplerEngine.noteOn(midiNote, velocity);
+    DBG("*** triggerNote: noteOn returned ***");
     
-    DBG("Queued MIDI note for audio thread");
+    if (midiNote >= 0 && midiNote < 128)
+        recentMidiNotes[midiNote].store(true);
+        
+    DBG("*** triggerNote EXIT ***");
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
