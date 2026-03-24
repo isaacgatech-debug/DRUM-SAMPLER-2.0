@@ -23,6 +23,11 @@ juce_add_plugin(DrumLibrary
     VST3_CATEGORIES         "Instrument" "Drums"
 )
 
+juce_add_binary_data(DrumLibraryResources
+    SOURCES
+        Resources/drum-backdrop.png
+)
+
 target_sources(DrumLibrary PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp
@@ -44,6 +49,7 @@ target_link_libraries(DrumLibrary PRIVATE
     juce::juce_gui_basics
     juce::juce_gui_extra
     juce::juce_dsp
+    DrumLibraryResources
     PUBLIC
     juce::juce_recommended_config_flags
     juce::juce_recommended_lto_flags
