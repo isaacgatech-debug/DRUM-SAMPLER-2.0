@@ -9,7 +9,7 @@ const char* TriggerUI::micNames[8] = {
 //==============================================================================
 // TriggerChannel
 //==============================================================================
-TriggerChannel::TriggerChannel(const juce::String& micName)
+TriggerUI::TriggerChannel::TriggerChannel(const juce::String& micName)
     : channelName(micName)
 {
     // Import button
@@ -74,7 +74,7 @@ TriggerChannel::TriggerChannel(const juce::String& micName)
     addAndMakeVisible(freqEditor);
 }
 
-void TriggerChannel::paint(juce::Graphics& g)
+void TriggerUI::TriggerChannel::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
 
@@ -127,7 +127,7 @@ void TriggerChannel::paint(juce::Graphics& g)
     }
 }
 
-void TriggerChannel::resized()
+void TriggerUI::TriggerChannel::resized()
 {
     auto area = getLocalBounds();
     area.removeFromTop(4);
@@ -160,7 +160,7 @@ void TriggerChannel::resized()
     freqEditor.setBounds(area);
 }
 
-void TriggerChannel::drawWaveform(juce::Graphics& g, juce::Rectangle<int> area)
+void TriggerUI::TriggerChannel::drawWaveform(juce::Graphics& g, juce::Rectangle<int> area)
 {
     if (audioBuffer.getNumSamples() == 0 || area.getWidth() <= 0) return;
 
@@ -210,7 +210,7 @@ void TriggerChannel::drawWaveform(juce::Graphics& g, juce::Rectangle<int> area)
     g.strokePath(waveform, juce::PathStrokeType(1.0f));
 }
 
-void TriggerChannel::loadAudioFile(const juce::File& file)
+void TriggerUI::TriggerChannel::loadAudioFile(const juce::File& file)
 {
     juce::AudioFormatManager fmt;
     fmt.registerBasicFormats();
@@ -227,7 +227,7 @@ void TriggerChannel::loadAudioFile(const juce::File& file)
     }
 }
 
-bool TriggerChannel::isInterestedInFileDrag(const juce::StringArray& files)
+bool TriggerUI::TriggerChannel::isInterestedInFileDrag(const juce::StringArray& files)
 {
     for (const auto& f : files)
         if (f.endsWithIgnoreCase(".wav") || f.endsWithIgnoreCase(".aif") ||
@@ -236,17 +236,17 @@ bool TriggerChannel::isInterestedInFileDrag(const juce::StringArray& files)
     return false;
 }
 
-void TriggerChannel::fileDragEnter(const juce::StringArray& files, int, int)
+void TriggerUI::TriggerChannel::fileDragEnter(const juce::StringArray& files, int, int)
 {
     if (isInterestedInFileDrag(files)) { isDragOver = true; repaint(); }
 }
 
-void TriggerChannel::fileDragExit(const juce::StringArray&)
+void TriggerUI::TriggerChannel::fileDragExit(const juce::StringArray&)
 {
     isDragOver = false; repaint();
 }
 
-void TriggerChannel::filesDropped(const juce::StringArray& files, int, int)
+void TriggerUI::TriggerChannel::filesDropped(const juce::StringArray& files, int, int)
 {
     isDragOver = false;
     if (!files.isEmpty()) loadAudioFile(juce::File(files[0]));

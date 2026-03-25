@@ -4,8 +4,7 @@
 #include "BinaryData.h"
 #include "PluginColors.h"
 #include "InstrumentSettingsPanel.h"
-
-class DrumSampler2Processor;
+#include "../Core/PluginProcessor.h"
 
 class DrumKitView : public juce::Component
 {
@@ -61,22 +60,8 @@ private:
 
         void paint(juce::Graphics& g) override
         {
-            bool showRing = (glowAlpha > 0.01f) || isHovered || isSelected;
-            if (!showRing) return;
-
-            float alpha = juce::jmax(isHovered ? 0.5f : 0.0f,
-                                     isSelected ? 0.9f : 0.0f,
-                                     glowAlpha);
-
-            auto b = getLocalBounds().toFloat().reduced(2.0f);
-            juce::Colour ringColor = juce::Colour(PluginColors::accent).withAlpha(alpha);
-
-            // Cyan glow ring
-            g.setColour(ringColor.withAlpha(alpha * 0.25f));
-            g.fillEllipse(b);
-
-            g.setColour(ringColor);
-            g.drawEllipse(b, isSelected ? 2.0f : 1.5f);
+            // Invisible hotspot - no visual rendering
+            juce::ignoreUnused(g);
         }
 
         void mouseEnter(const juce::MouseEvent&) override { isHovered = true;  repaint(); }
