@@ -5,14 +5,8 @@ DrumSampler2Editor::DrumSampler2Editor(DrumSampler2Processor& p)
 {
     setSize(650, 750);
 
-    auto resourcesFolder = juce::File::getSpecialLocation(juce::File::currentExecutableFile)
-        .getParentDirectory().getChildFile("Resources");
-    auto logoFile = resourcesFolder.getChildFile("gridlock-logo.png");
-    
-    if (logoFile.existsAsFile())
-    {
-        logoImage = juce::ImageFileFormat::loadFrom(logoFile);
-    }
+    logoImage = juce::ImageCache::getFromMemory(BinaryData::gridlocklogo_png, 
+                                                 BinaryData::gridlocklogo_pngSize);
 
     titleLabel.setText("DRUM SAMPLER 2", juce::dontSendNotification);
     titleLabel.setFont(juce::FontOptions(24.0f, juce::Font::bold));

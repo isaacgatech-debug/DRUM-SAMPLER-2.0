@@ -31,6 +31,7 @@ juce_add_plugin(DrumSampler2
 juce_add_binary_data(DrumSampler2Resources
     SOURCES
         Resources/drum-backdrop.png
+        Resources/gridlock-logo.png
 )
 
 # Source files
