@@ -5,70 +5,83 @@
 #include "../UI/DrumKitView.h"
 #include "../UI/MixerView.h"
 #include "../UI/GrooveBrowser.h"
+#include "../UI/GrooveTimeline.h"
+#include "../UI/TransportBar.h"
+#include "../UI/PluginColors.h"
 #include "../Trigger/TriggerUI.h"
-#include "../UI/RoutingView.h"
 #include "DebugConsole.h"
 #include "ErrorLogger.h"
 
 class DrumSampler2Editor : public juce::AudioProcessorEditor,
                            public ErrorLogger::Listener,
-                           private juce::Timer
+                           private juce::Timer,
+                           private juce::KeyListener
 {
 public:
     explicit DrumSampler2Editor(DrumSampler2Processor&);
     ~DrumSampler2Editor() override;
 
-    void paint(juce::Graphics&) override;
+    void paint  (juce::Graphics&) override;
     void resized() override;
     void logUpdated() override;
-    
+
+    bool keyPressed(const juce::KeyPress& key, juce::Component* originator) override;
+
     void timerCallback() override
     {
-        // Check for MIDI notes and update piece visuals
         for (int note = 0; note < 128; ++note)
-        {
             if (processor.checkAndClearMidiNote(note))
-            {
                 kitView.triggerPieceVisual(note);
-            }
-        }
     }
-    
+
 private:
-    void loadSamplesClicked();
     void updateStatus();
     void toggleDebugConsole();
-    void updateBugsButton();
-    
+    void switchTab(int tab);
+    void paintTabBar(juce::Graphics& g, juce::Rectangle<int> area);
+
     DrumSampler2Processor& processor;
 
-    juce::Label titleLabel;
+    // Branding
     juce::Image logoImage;
-    juce::TextButton loadButton{"LOAD SAMPLES"};
-    juce::TextButton bugsButton{"BUGS"};
-    juce::Label statusLabel;
 
-    juce::TextButton tabKit{"KIT"};
-    juce::TextButton tabGrooves{"GROOVES"};
-    juce::TextButton tabMixer{"MIXER"};
+    // Tab buttons
+    juce::TextButton tabKit    {"KIT"};
+    juce::TextButton tabMixer  {"MIXER"};
     juce::TextButton tabTrigger{"TRIGGER"};
-    juce::TextButton tabRouting{"ROUTING"};
+    juce::TextButton tabGrooves{"GROOVES"};
 
-    DrumKitView kitView;
+    // Instrument selector bar (kit dropdown placeholder)
+    juce::ComboBox kitSelector;
+
+    // Tab content views
+    DrumKitView   kitView;
     GrooveBrowser grooveBrowser;
-    MixerView mixerView;
-    TriggerUI triggerUI;
-    RoutingView routingView;
-    
+    MixerView     mixerView;
+    TriggerUI     triggerUI;
+
+    // MIDI roll — always visible at bottom
+    GrooveTimeline grooveTimeline;
+    TransportBar   transportBar;
+
+    // Debug console (Ctrl+Shift+D)
     std::unique_ptr<DebugConsole> debugConsole;
     bool debugConsoleVisible = false;
 
-    juce::Colour bg{0xFF1A1A1A};
-    juce::Colour header{0xFF111111};
-    juce::Colour accent{0xFFE8A020};
-    juce::Colour textCol{0xFFCCCCCC};
-
     int activeTab = 0;
+
+    // New design tokens
+    juce::Colour bg     {PluginColors::pluginBg};
+    juce::Colour header {PluginColors::pluginPanel};
+    juce::Colour accent {PluginColors::accent};
+    juce::Colour textCol{PluginColors::textPrimary};
+
+    static constexpr int topNavH       = 44;
+    static constexpr int instrBarH     = 36;
+    static constexpr int midiRollH     = GrooveTimeline::trackBarH
+                                       + GrooveTimeline::rulerH
+                                       + GrooveTimeline::rollH;
+    static constexpr int transportBarH = 44;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrumSampler2Editor)
 };

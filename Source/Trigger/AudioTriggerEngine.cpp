@@ -99,6 +99,12 @@ void AudioTriggerEngine::setSensitivity(float sens)
     onsetDetector.setSensitivity(sensitivity);
 }
 
+void AudioTriggerEngine::setTargetDrumType(DrumType type)
+{
+    targetDrumType = type;
+    onsetDetector.setTargetDrumType(type);
+}
+
 void AudioTriggerEngine::setMinTimeBetweenHits(double timeMs)
 {
     minTimeBetweenHits = timeMs;

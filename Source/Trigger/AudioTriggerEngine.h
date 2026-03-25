@@ -26,12 +26,16 @@ public:
     void setBleedSuppression(float amount);
     void setSensitivity(float sensitivity);
     void setMinTimeBetweenHits(double timeMs);
+    void setTargetDrumType(DrumType type);
     
     void enableRealTimeMode(bool enable) { realTimeMode = enable; }
     bool isRealTimeMode() const { return realTimeMode; }
     
     float getThreshold() const { return threshold; }
     float getBleedSuppression() const { return bleedSuppression; }
+    
+    DrumType getTargetDrumType() const { return targetDrumType; }
+    OnsetDetector& getOnsetDetector() { return onsetDetector; }
     
     void exportToMIDI(const std::vector<TriggerResult>& results, const juce::File& outputFile);
     
@@ -50,6 +54,7 @@ private:
     
     bool realTimeMode = false;
     double sampleRate = 44100.0;
+    DrumType targetDrumType = DrumType::Unknown;
     
     std::vector<OnsetEvent> recentOnsets;
     double currentTime = 0.0;
