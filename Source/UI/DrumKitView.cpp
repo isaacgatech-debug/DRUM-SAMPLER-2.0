@@ -7,17 +7,23 @@ DrumKitView::DrumKitView()
     // Load backdrop from binary data
     backdropImage = juce::ImageFileFormat::loadFrom(BinaryData::drumbackdrop_png,
                                                     BinaryData::drumbackdrop_pngSize);
-    if (backdropImage.isValid())
-        LOG_INFO("Backdrop loaded: " + juce::String(backdropImage.getWidth()) + "x"
-                 + juce::String(backdropImage.getHeight()));
-    else
+    if (!backdropImage.isValid())
         LOG_ERROR("Failed to load backdrop image!");
 
-    // Drum pieces
-    auto makePiece = [&](std::unique_ptr<DrumPiece>& piece, const juce::String& n,
-                          int note, DrumPiece::Type type, juce::Colour col)
+    // Create drum pieces
+    auto makePiece = [&](std::unique_ptr<DrumPiece>& piece,
+                          const juce::String& n, int note,
+                          DrumPiece::Type type, juce::Colour col)
     {
         piece = std::make_unique<DrumPiece>(n, note, type, col);
+
+        // When a piece is selected, notify settings panel (drum swap UI)
+        piece->onSelected = [this](const juce::String& name, int note2)
+        {
+            settingsPanel.setSelectedDrum(name, note2);
+            juce::ignoreUnused(note2);
+        };
+
         addAndMakeVisible(*piece);
     };
 
@@ -31,23 +37,39 @@ DrumKitView::DrumKitView()
     makePiece(crash2Piece, "CRASH 2", 57, DrumPiece::Type::Cymbal, juce::Colour(0xFFB8B8B8));
     makePiece(ridePiece,   "RIDE",    51, DrumPiece::Type::Cymbal, juce::Colour(0xFFDAA520));
 
-    // Right panel
+    // Wire kick piece to beater animation
+    if (kickPiece)
+    {
+        auto origOnSelected = kickPiece->onSelected;
+        kickPiece->onSelected = [this, origOnSelected](const juce::String& n, int note)
+        {
+            kickBeater.trigger();
+            if (origOnSelected) origOnSelected(n, note);
+        };
+    }
+
+    // Child components
     addAndMakeVisible(settingsPanel);
+    addAndMakeVisible(kickBeater);
+    addAndMakeVisible(pianoPanel);
 }
 
+//==============================================================================
 void DrumKitView::paint(juce::Graphics& g)
 {
-    auto kitArea = getLocalBounds().withTrimmedRight(settingsPanelW).toFloat();
+    auto kitArea = getLocalBounds()
+                       .withTrimmedRight(settingsPanelW)
+                       .withTrimmedBottom(pianoH)
+                       .toFloat();
 
     if (backdropImage.isValid())
     {
-        // OBJECT-CONTAIN: centred, only reduce in size (never stretch/zoom)
         g.drawImage(backdropImage,
                     kitArea,
                     juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize);
 
-        // Subtle dark vignette overlay
-        g.setColour(juce::Colours::black.withAlpha(0.12f));
+        // Subtle vignette
+        g.setColour(juce::Colours::black.withAlpha(0.1f));
         g.fillRect(kitArea);
     }
     else
@@ -57,18 +79,20 @@ void DrumKitView::paint(juce::Graphics& g)
     }
 }
 
+//==============================================================================
 void DrumKitView::resized()
 {
     auto area = getLocalBounds();
 
-    // Settings panel on the right
+    // Settings panel (right)
     settingsPanel.setBounds(area.removeFromRight(settingsPanelW));
 
-    // Kit image area
+    // Piano keyboard (bottom)
+    pianoPanel.setBounds(area.removeFromBottom(pianoH));
+
     int w = area.getWidth();
     int h = area.getHeight();
 
-    // Hotspot positions (relative to kit image area, percent-based)
     // Crash 1 (upper-left)
     crashPiece->setBounds(
         area.getX() + (int)(w * 0.17) - (int)(w * 0.095),
@@ -106,10 +130,14 @@ void DrumKitView::resized()
         (int)(w * 0.195), (int)(h * 0.142));
 
     // Kick
-    kickPiece->setBounds(
+    auto kickBounds = juce::Rectangle<int>(
         area.getX() + (int)(w * 0.45) - (int)(w * 0.110),
         (int)(h * 0.61) - (int)(h * 0.105),
         (int)(w * 0.220), (int)(h * 0.210));
+    kickPiece->setBounds(kickBounds);
+
+    // Kick beater overlay — positioned over kick, tall enough for pedal arm
+    kickBeater.setBounds(kickBounds.expanded(20, 40).translated(0, 30));
 
     // Tom 2
     tom2Piece->setBounds(

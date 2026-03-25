@@ -31,6 +31,7 @@ juce_add_plugin(DrumSampler2
 juce_add_binary_data(DrumSampler2Resources
     SOURCES
         Resources/Backdrops/drum-backdrop.png
+        "Resources/LOGO/Gridlock Logo - White.png"
 )
 
 # Source files
@@ -99,6 +100,7 @@ target_sources(DrumSampler2 PRIVATE
     Source/UI/GrooveTimeline.cpp
     Source/UI/TransportBar.cpp
     Source/UI/InstrumentSettingsPanel.cpp
+    Source/UI/ParametricEQWindow.cpp
 )
 
 # Compile definitions

@@ -8,6 +8,7 @@
 #include "../UI/GrooveTimeline.h"
 #include "../UI/TransportBar.h"
 #include "../UI/PluginColors.h"
+#include "../UI/ThemeManager.h"
 #include "../Trigger/TriggerUI.h"
 #include "DebugConsole.h"
 #include "ErrorLogger.h"
@@ -39,10 +40,11 @@ private:
     void toggleDebugConsole();
     void switchTab(int tab);
     void paintTabBar(juce::Graphics& g, juce::Rectangle<int> area);
+    void applyTheme();
+    void showKitPopupMenu();
 
     DrumSampler2Processor& processor;
 
-    // Branding
     juce::Image logoImage;
 
     // Tab buttons
@@ -51,30 +53,26 @@ private:
     juce::TextButton tabTrigger{"TRIGGER"};
     juce::TextButton tabGrooves{"GROOVES"};
 
-    // Instrument selector bar (kit dropdown placeholder)
-    juce::ComboBox kitSelector;
+    // Top-right controls
+    juce::TextButton kitSelectorBtn{"Kit: Default"};
+    juce::TextButton themeModeBtn  {"LIGHT"};
 
-    // Tab content views
+    // Content views
     DrumKitView   kitView;
     GrooveBrowser grooveBrowser;
     MixerView     mixerView;
     TriggerUI     triggerUI;
 
-    // MIDI roll — always visible at bottom
+    // Bottom persistent bar
     GrooveTimeline grooveTimeline;
     TransportBar   transportBar;
 
-    // Debug console (Ctrl+Shift+D)
+    // Debug console
     std::unique_ptr<DebugConsole> debugConsole;
     bool debugConsoleVisible = false;
 
-    int activeTab = 0;
-
-    // New design tokens
-    juce::Colour bg     {PluginColors::pluginBg};
-    juce::Colour header {PluginColors::pluginPanel};
-    juce::Colour accent {PluginColors::accent};
-    juce::Colour textCol{PluginColors::textPrimary};
+    int          activeTab     = 0;
+    juce::String currentKitName{"Default Kit"};
 
     static constexpr int topNavH       = 44;
     static constexpr int instrBarH     = 36;

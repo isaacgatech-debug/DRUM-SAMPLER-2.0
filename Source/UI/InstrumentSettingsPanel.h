@@ -16,6 +16,14 @@ public:
     void resized() override;
     void mouseDown(const juce::MouseEvent& e) override;
 
+    /** Called when a DrumPiece is clicked — updates the panel for that drum. */
+    void setSelectedDrum(const juce::String& drumName, int midiNote)
+    {
+        selectedDrumName = drumName;
+        selectedMidiNote = midiNote;
+        repaint();
+    }
+
 private:
     void drawSectionHeader(juce::Graphics& g, juce::Rectangle<float> area,
                            const juce::String& label, bool collapsed);
@@ -48,6 +56,14 @@ private:
     // Collapsible sections
     bool voiceLayerOpen = true;
     bool midiMappingOpen= true;
+
+    // Selected drum state
+    juce::String selectedDrumName = "KICK";
+    int          selectedMidiNote = 36;
+
+    // Damper slider (0 = dead, 1 = live)
+    juce::Slider damperSlider;
+    juce::Label  damperLabel;
 
     // Voice & Layer values
     int hardVal = 4, gradVal = 4, softVal = 4, voiceLimitVal = 8;
