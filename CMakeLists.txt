@@ -95,6 +95,10 @@ target_sources(DrumSampler2 PRIVATE
     Source/UI/VUMeter.cpp
     Source/UI/RoutingView.cpp
     Source/UI/PluginBrowser.cpp
+    Source/UI/FrequencyBandEditor.cpp
+    Source/UI/GrooveTimeline.cpp
+    Source/UI/TransportBar.cpp
+    Source/UI/InstrumentSettingsPanel.cpp
 )
 
 # Compile definitions

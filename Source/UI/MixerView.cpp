@@ -4,8 +4,31 @@
 
 MixerView::MixerView()
 {
+    stripsViewport.setViewedComponent(&stripsContainer, false);
+    stripsViewport.setScrollBarsShown(false, true);  // vertical off, horizontal on
+    stripsViewport.setScrollBarThickness(8);
+    addAndMakeVisible(stripsViewport);
+
+    // Master fader
+    masterFader.setSliderStyle(juce::Slider::LinearVertical);
+    masterFader.setRange(0.0, 1.0, 0.001);
+    masterFader.setValue(0.8);
+    masterFader.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    masterFader.setColour(juce::Slider::thumbColourId,      juce::Colour(PluginColors::textPrimary));
+    masterFader.setColour(juce::Slider::trackColourId,      juce::Colour(PluginColors::accentDim));
+    masterFader.setColour(juce::Slider::backgroundColourId, juce::Colour(PluginColors::pluginBg));
+    addAndMakeVisible(masterFader);
+
+    masterDbLabel.setText("-2.0", juce::dontSendNotification);
+    masterDbLabel.setFont(PluginFonts::mono(10.0f));
+    masterDbLabel.setColour(juce::Label::textColourId, juce::Colour(PluginColors::accent));
+    masterDbLabel.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(masterDbLabel);
+
+    addAndMakeVisible(masterVU);
+
     createChannelStrips();
-    startTimerHz(30); // 30 FPS for meter updates
+    startTimerHz(30);
 }
 
 MixerView::~MixerView()
@@ -15,232 +38,148 @@ MixerView::~MixerView()
 
 void MixerView::createChannelStrips()
 {
+    int totalW = numChannels * ChannelStrip::stripWidth;
+    stripsContainer.setSize(totalW, 800);
+
     for (int i = 0; i < numChannels; ++i)
     {
         channelStrips[i] = std::make_unique<ChannelStrip>(i, channelNames[i]);
-        
-        // Set up parameter callbacks
-        channelStrips[i]->onParameterChanged = [this](int channel, const juce::String& param, float value)
+
+        channelStrips[i]->onButtonChanged = [this](int ch, const juce::String& btn, bool state)
         {
-            DBG("Channel " + juce::String(channel) + " - " + param + ": " + juce::String(value));
-            // Route to processor
             if (processor)
             {
-                // TODO: Implement parameter routing to processor
-            }
-        };
-        
-        channelStrips[i]->onButtonChanged = [this](int channel, const juce::String& btn, bool state)
-        {
-            DBG("Channel " + juce::String(channel) + " - " + btn + ": " + (state ? "ON" : "OFF"));
-            // Route to processor
-            if (processor)
-            {
-                auto* mixerChannel = processor->getMixerChannelForInput(channel);
-                if (mixerChannel)
+                auto* mc = processor->getMixerChannelForInput(ch);
+                if (mc)
                 {
-                    if (btn == "Mute")
-                        mixerChannel->setMute(state);
-                    else if (btn == "Solo")
-                        mixerChannel->setSolo(state);
-                    else if (btn == "Phase")
-                        mixerChannel->setPhaseInvert(state);
+                    if (btn == "Mute") mc->setMute(state);
+                    else if (btn == "Solo") mc->setSolo(state);
                 }
             }
         };
-        
-        channelStrips[i]->onOutputBusChanged = [this](int channel, int busIndex)
+
+        channelStrips[i]->onParameterChanged = [this](int ch, const juce::String& param, float val)
         {
-            DBG("Channel " + juce::String(channel) + " -> Bus " + juce::String(busIndex));
-            if (processor)
-            {
-                auto* mixerChannel = processor->getMixerChannelForInput(channel);
-                if (mixerChannel)
-                    mixerChannel->setOutputBus(busIndex);
-            }
+            juce::ignoreUnused(ch, param, val);
         };
-        
-        channelStrips[i]->onInputSourceChanged = [this](int channel, int sourceIndex)
-        {
-            DBG("Channel " + juce::String(channel) + " Input Source: " + juce::String(sourceIndex));
-            if (processor)
-            {
-                // Route this channel to receive audio from the selected input source
-                // This changes which audio stream feeds into this channel
-                // TODO: Implement input source routing in processor
-            }
-        };
-        
-        addAndMakeVisible(*channelStrips[i]);
+
+        stripsContainer.addAndMakeVisible(*channelStrips[i]);
     }
 }
 
 void MixerView::setProcessor(DrumSampler2Processor* proc)
 {
     processor = proc;
-    
     for (auto& strip : channelStrips)
-    {
-        if (strip)
-            strip->setProcessor(proc);
-    }
+        if (strip) strip->setProcessor(proc);
 }
 
 void MixerView::paint(juce::Graphics& g)
 {
-    // Background
-    g.fillAll(bgColor);
-    
-    // Draw mixer frame
-    drawMixerFrame(g);
+    g.fillAll(juce::Colour(PluginColors::pluginBg));
+
+    // Sidebar
+    auto sidebarBounds = getLocalBounds().toFloat().removeFromLeft(static_cast<float>(sidebarW));
+    drawSidebar(g, sidebarBounds);
+
+    // Master separator (2px)
+    float masterX = static_cast<float>(getWidth() - masterW);
+    g.setColour(juce::Colour(PluginColors::accent).withAlpha(0.3f));
+    g.fillRect(masterX - 2.0f, 0.0f, 2.0f, static_cast<float>(getHeight()));
 }
 
-void MixerView::drawMixerFrame(juce::Graphics& g)
+void MixerView::drawSidebar(juce::Graphics& g, juce::Rectangle<float> bounds)
 {
-    auto bounds = getLocalBounds().toFloat();
-    
-    // Top frame bar
-    auto topBar = bounds.removeFromTop(30.0f);
-    g.setGradientFill(juce::ColourGradient(
-        metalColor.brighter(0.1f), topBar.getX(), topBar.getY(),
-        darkMetal, topBar.getX(), topBar.getBottom(),
-        false));
-    g.fillRect(topBar);
-    
-    // Title
-    g.setFont(juce::FontOptions(16.0f, juce::Font::bold));
-    g.setColour(accentColor);
-    g.drawText("MIXER", topBar.reduced(10.0f, 0), juce::Justification::centredLeft, false);
-    
-    // Right side info
-    g.setFont(juce::FontOptions(10.0f));
-    g.setColour(juce::Colours::lightgrey.withAlpha(0.7f));
-    juce::String infoText = "12 CH | 8 BUSES | OUT: 33";
-    g.drawText(infoText, topBar.reduced(10.0f, 0), juce::Justification::centredRight, false);
-    
-    // Bottom frame bar
-    auto bottomBar = bounds.removeFromBottom(20.0f);
-    g.setGradientFill(juce::ColourGradient(
-        darkMetal, bottomBar.getX(), bottomBar.getY(),
-        metalColor.darker(0.2f), bottomBar.getX(), bottomBar.getBottom(),
-        false));
-    g.fillRect(bottomBar);
-    
-    // Side rails for punk industrial look
-    g.setColour(metalColor.darker(0.3f));
-    g.fillRect(bounds.getX(), bounds.getY(), 4.0f, bounds.getHeight());
-    g.fillRect(bounds.getRight() - masterWidth - 4.0f, bounds.getY(), 4.0f, bounds.getHeight());
-    
-    // Draw master section background
-    auto masterBounds = bounds.removeFromRight(static_cast<float>(masterWidth));
-    drawMasterSection(g, masterBounds);
+    g.setColour(juce::Colour(PluginColors::pluginPanel));
+    g.fillRect(bounds);
+
+    g.setColour(juce::Colour(PluginColors::pluginBorder));
+    g.drawVerticalLine(static_cast<int>(bounds.getRight()) - 1, bounds.getY(), bounds.getBottom());
+
+    // Labels aligned to sections in channel strip layout
+    const char* labels[] = { "INPUT", "EQ", "SENDS", "S/M", "VU", "FADER", "PAN" };
+    // Approx y positions matching channel strip layout (after 3+36+30=69px header area)
+    const int labelYs[] = { 5, 75, 120, 165, 200, 310, 400 };
+
+    g.setFont(PluginFonts::mono(8.0f));
+    g.setColour(juce::Colour(PluginColors::textDim));
+
+    for (int i = 0; i < 7; ++i)
+    {
+        g.drawText(labels[i],
+                   static_cast<int>(bounds.getX()), labelYs[i],
+                   static_cast<int>(bounds.getWidth()), 12,
+                   juce::Justification::centred, false);
+        // Separator line
+        g.setColour(juce::Colour(PluginColors::pluginBorder).withAlpha(0.4f));
+        g.drawHorizontalLine(labelYs[i] - 1, bounds.getX(), bounds.getRight());
+        g.setColour(juce::Colour(PluginColors::textDim));
+    }
 }
 
 void MixerView::drawMasterSection(juce::Graphics& g, juce::Rectangle<float> bounds)
 {
-    // Master section background
-    g.setGradientFill(juce::ColourGradient(
-        darkMetal.darker(0.1f), bounds.getX(), bounds.getY(),
-        darkMetal, bounds.getX(), bounds.getBottom(),
-        false));
+    g.setColour(juce::Colour(PluginColors::pluginPanel));
     g.fillRect(bounds);
-    
-    // Master label
-    auto headerBounds = bounds.removeFromTop(35.0f);
-    g.setGradientFill(juce::ColourGradient(
-        accentColor.darker(0.5f), headerBounds.getX(), headerBounds.getY(),
-        darkMetal.darker(0.2f), headerBounds.getX(), headerBounds.getBottom(),
-        false));
-    g.fillRect(headerBounds);
-    
-    g.setFont(juce::FontOptions(12.0f, juce::Font::bold));
-    g.setColour(juce::Colours::white);
-    g.drawText("MASTER", headerBounds.reduced(4.0f), juce::Justification::centred, false);
-    
-    // Master accent line
-    g.setColour(accentColor);
-    g.fillRect(headerBounds.getX(), headerBounds.getY(), headerBounds.getWidth(), 2.0f);
-    
-    // Master fader area (placeholder - could add master volume here)
-    auto faderBounds = bounds.removeFromTop(120.0f);
-    g.setColour(metalColor.withAlpha(0.3f));
-    g.fillRect(faderBounds.reduced(8.0f));
-    
-    g.setFont(juce::FontOptions(9.0f));
-    g.setColour(juce::Colours::lightgrey);
-    g.drawText("MASTER FADER", faderBounds, juce::Justification::centred, false);
-    
-    // Output meters area
-    auto meterBounds = bounds.removeFromTop(200.0f);
-    g.setColour(metalColor.withAlpha(0.3f));
-    g.fillRect(meterBounds.reduced(8.0f));
-    
-    // DAW routing info
-    auto routingBounds = bounds.reduced(4.0f);
-    g.setFont(juce::FontOptions(8.0f));
-    g.setColour(accentColor.withAlpha(0.8f));
-    g.drawText("DAW ROUTING", routingBounds.removeFromTop(20.0f), juce::Justification::centred, false);
-    
-    g.setColour(juce::Colours::lightgrey.withAlpha(0.6f));
-    g.drawMultiLineText(
-        "All channels routable\nto DAW tracks via\n33 output buses",
-        static_cast<int>(routingBounds.getCentreX() - 40),
-        static_cast<int>(routingBounds.getY() + 30),
-        80);
+
+    // Cyan top bar (3px)
+    g.setColour(PluginColors::masterColor);
+    g.fillRect(bounds.removeFromTop(3.0f));
+
+    // Header
+    auto header = bounds.removeFromTop(36.0f);
+    g.setColour(juce::Colour(PluginColors::pluginSurface));
+    g.fillRect(header);
+    g.setFont(PluginFonts::label(11.0f));
+    g.setColour(PluginColors::masterColor);
+    g.drawText("MASTER", header, juce::Justification::centred, false);
 }
 
 void MixerView::resized()
 {
-    auto bounds = getLocalBounds();
-    
-    // Account for frame bars
-    bounds.removeFromTop(30);
-    bounds.removeFromBottom(20);
-    
-    // Remove side rails space
-    bounds.removeFromLeft(4);
-    bounds.removeFromRight(4);
-    
-    // Master section on right
-    auto masterBounds = bounds.removeFromRight(masterWidth);
-    
-    // Distribute channel strips across remaining space
-    int availableWidth = bounds.getWidth();
-    int stripCount = numChannels;
-    int actualStripWidth = juce::jmin(stripWidth, availableWidth / stripCount);
-    
-    // If we have more space, center the strips
-    int totalStripWidth = actualStripWidth * stripCount;
-    int extraSpace = availableWidth - totalStripWidth;
-    int leftPadding = extraSpace / 2;
-    
-    bounds.removeFromLeft(leftPadding);
-    
+    auto area = getLocalBounds();
+    area.removeFromLeft(sidebarW);
+
+    // Master strip (right side)
+    auto masterArea = area.removeFromRight(masterW);
+
+    // Viewport fills the rest
+    stripsViewport.setBounds(area);
+
+    // Size container to fit all strips at full height
+    int containerH = area.getHeight();
+    int totalW = numChannels * ChannelStrip::stripWidth;
+    stripsContainer.setSize(totalW, containerH);
+
+    // Position each strip
     for (int i = 0; i < numChannels; ++i)
     {
         if (channelStrips[i])
-        {
-            auto stripBounds = bounds.removeFromLeft(actualStripWidth);
-            channelStrips[i]->setBounds(stripBounds);
-        }
+            channelStrips[i]->setBounds(i * ChannelStrip::stripWidth, 0,
+                                         ChannelStrip::stripWidth, containerH);
     }
-    
-    // Keep master bounds (unused but reserved for future master controls)
-    juce::ignoreUnused(masterBounds);
+
+    // Master section components
+    int mX = masterArea.getX();
+    int mY = masterArea.getY();
+    int mH = masterArea.getHeight();
+    int mW = masterArea.getWidth();
+
+    // VU left, fader right
+    masterVU.setBounds(mX + 4, mY + 45, 20, mH - 100);
+    masterFader.setBounds(mX + 30, mY + 45, mW - 34, mH - 100);
+    masterDbLabel.setBounds(mX, mY + mH - 48, mW, 14);
 }
 
 void MixerView::timerCallback()
 {
-    // Update VU meters from processor
     if (processor)
     {
         for (int i = 0; i < numChannels; ++i)
         {
-            auto* channel = processor->getMixerChannelForInput(i);
-            if (channel && channelStrips[i])
-            {
-                channelStrips[i]->updateMeter(channel->getPeakLevel(), channel->getRMSLevel());
-            }
+            auto* ch = processor->getMixerChannelForInput(i);
+            if (ch && channelStrips[i])
+                channelStrips[i]->updateMeter(ch->getPeakLevel(), ch->getRMSLevel());
         }
     }
 }
