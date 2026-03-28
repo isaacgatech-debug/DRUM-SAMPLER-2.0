@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_gui_extra/juce_gui_extra.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "BinaryData.h"
 #include "PluginColors.h"
@@ -14,7 +15,7 @@ public:
     void paint  (juce::Graphics& g) override;
     void resized() override;
 
-    void setProcessor(DrumSampler2Processor* proc)
+    void setProcessor(DrumTechProcessor* proc)
     {
         processor = proc;
         for (auto* p : allPieces())
@@ -70,8 +71,9 @@ private:
             arm.lineTo(ax, ay);
 
             g.setColour(juce::Colour(0xFFBBBBBB));
-            g.strokePath(arm, juce::PathStrokeType(3.0f, juce::PathStrokeType::rounded,
-                                                   juce::PathStrokeType::rounded));
+            g.strokePath(arm, juce::PathStrokeType(3.0f,
+                juce::PathStrokeType::JointStyle::curved,
+                juce::PathStrokeType::EndCapStyle::rounded));
 
             // Beater head
             float headR = 7.0f;
@@ -155,7 +157,7 @@ private:
             juce::ignoreUnused(e);
         }
 
-        void setProcessor(DrumSampler2Processor* proc) { processor = proc; }
+        void setProcessor(DrumTechProcessor* proc) { processor = proc; }
         int getMidiNote() const { return midiNote; }
 
         void flash()
@@ -183,21 +185,19 @@ private:
         float glowAlpha  = 0.0f;
         bool  isHovered  = false;
         bool  isSelected = false;
-        DrumSampler2Processor* processor = nullptr;
+        DrumTechProcessor* processor = nullptr;
     };
 
-    // -----------------------------------------------------------------------
-    // Piano keyboard roll at the bottom of drum view
-    // -----------------------------------------------------------------------
+/*  // DISABLED: Piano keyboard roll at the bottom of drum view
     class PianoKeyboardPanel : public juce::Component
     {
     public:
         PianoKeyboardPanel()
         {
-            keyState.addListener(nullptr);  // satisfy requirement
+            keyState.addListener(nullptr);
             keyboard = std::make_unique<juce::MidiKeyboardComponent>(
                 keyState, juce::MidiKeyboardComponent::horizontalKeyboard);
-            keyboard->setAvailableRange(24, 84);  // C1 – C5
+            keyboard->setAvailableRange(24, 84);
             keyboard->setScrollButtonsVisible(true);
             keyboard->setColour(juce::MidiKeyboardComponent::whiteNoteColourId,
                                 juce::Colour(0xFFDDE1E7));
@@ -220,6 +220,7 @@ private:
         std::unique_ptr<juce::MidiKeyboardComponent> keyboard;
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoKeyboardPanel)
     };
+*/
 
     // -----------------------------------------------------------------------
     // Private helpers
@@ -234,7 +235,7 @@ private:
     // -----------------------------------------------------------------------
     // Members
     // -----------------------------------------------------------------------
-    DrumSampler2Processor* processor = nullptr;
+    DrumTechProcessor* processor = nullptr;
     juce::Image backdropImage;
 
     // Right settings panel (260px)
@@ -244,9 +245,9 @@ private:
     // Kick beater animation overlay
     KickBeaterOverlay kickBeater;
 
-    // Piano keyboard (bottom of kit view)
-    PianoKeyboardPanel pianoPanel;
-    static constexpr int pianoH = 60;
+    // Piano keyboard (bottom of kit view) - DISABLED for build
+    // PianoKeyboardPanel pianoPanel;
+    static constexpr int pianoH = 0;
 
     std::unique_ptr<DrumPiece> kickPiece, snarePiece, hihatPiece;
     std::unique_ptr<DrumPiece> tom1Piece, tom2Piece, tom3Piece;

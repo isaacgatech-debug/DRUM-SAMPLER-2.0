@@ -13,14 +13,14 @@
 #include "DebugConsole.h"
 #include "ErrorLogger.h"
 
-class DrumSampler2Editor : public juce::AudioProcessorEditor,
+class DrumTechEditor : public juce::AudioProcessorEditor,
                            public ErrorLogger::Listener,
                            private juce::Timer,
                            private juce::KeyListener
 {
 public:
-    explicit DrumSampler2Editor(DrumSampler2Processor&);
-    ~DrumSampler2Editor() override;
+    explicit DrumTechEditor(DrumTechProcessor&);
+    ~DrumTechEditor() override;
 
     void paint  (juce::Graphics&) override;
     void resized() override;
@@ -43,7 +43,7 @@ private:
     void applyTheme();
     void showKitPopupMenu();
 
-    DrumSampler2Processor& processor;
+    DrumTechProcessor& processor;
 
     juce::Image logoImage;
 
@@ -81,5 +81,5 @@ private:
                                        + GrooveTimeline::rollH;
     static constexpr int transportBarH = 44;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrumSampler2Editor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrumTechEditor)
 };

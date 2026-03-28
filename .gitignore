@@ -4,7 +4,6 @@ cmake-build-*/
 out/
 
 # IDE and editor files
-.vscode/
 .idea/
 *.code-workspace
 .DS_Store
@@ -16,15 +15,15 @@ out/
 *.zip
 *.dmg
 *.pkg
-DrumSampler2_Package/
+DrumTech_Package/
 
-# CMake
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-Makefile
-*.cmake
-!CMakeLists.txt
+# CMake — ignore only typical files dropped by an accidental in-source configure at the
+# repository root. Out-of-source builds use build/, already ignored above.
+# Avoid blanket `*.cmake`: it would untrack real modules (e.g. cmake/*.cmake) if added later.
+/CMakeCache.txt
+/CMakeFiles/
+/cmake_install.cmake
+/Makefile
 
 # Object files and libraries
 *.o
@@ -44,7 +43,6 @@ JuceLibraryCode/
 *_artefacts/
 
 # macOS
-.DS_Store
 .AppleDouble
 .LSOverride
 

@@ -4,7 +4,7 @@
 PresetManager::PresetManager()
 {
     userFolder = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-        .getChildFile("DrumSampler2")
+        .getChildFile("DrumTech")
         .getChildFile("Presets");
     
     userFolder.createDirectory();

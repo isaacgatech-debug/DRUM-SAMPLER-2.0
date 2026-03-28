@@ -1,4 +1,4 @@
-# Drum Sampler 2.0 - Implementation Status
+# Drum Tech - Implementation Status
 
 **Date**: March 21, 2026  
 **Phase**: Phase 1 - Foundation  
@@ -7,9 +7,9 @@
 ## Build Status
 
 ✅ **Successfully compiled** all plugin formats:
-- AU (Audio Unit): `build/DrumSampler2_artefacts/Release/AU/Drum Sampler 2.component`
-- VST3: `build/DrumSampler2_artefacts/Release/VST3/Drum Sampler 2.vst3`
-- Standalone: `build/DrumSampler2_artefacts/Release/Standalone/Drum Sampler 2.app`
+- AU (Audio Unit): `build/DrumTech_artefacts/Release/AU/Drum Tech.component`
+- VST3: `build/DrumTech_artefacts/Release/VST3/Drum Tech.vst3`
+- Standalone: `build/DrumTech_artefacts/Release/Standalone/Drum Tech.app`
 
 ## Phase 1 Accomplishments
 
@@ -177,10 +177,10 @@ windsurf-project-3/
 │       ├── RoutingView.h/cpp          ✅ Stub
 │       └── PluginBrowser.h/cpp        ✅ Stub
 └── build/
-    └── DrumSampler2_artefacts/Release/
-        ├── AU/Drum Sampler 2.component
-        ├── VST3/Drum Sampler 2.vst3
-        └── Standalone/Drum Sampler 2.app
+    └── DrumTech_artefacts/Release/
+        ├── AU/Drum Tech.component
+        ├── VST3/Drum Tech.vst3
+        └── Standalone/Drum Tech.app
 ```
 
 ## Technical Highlights
@@ -250,10 +250,10 @@ To install the built plugins:
 
 ```bash
 # Copy to system plugin folders
-cp -R build/DrumSampler2_artefacts/Release/AU/Drum\ Sampler\ 2.component \
+cp -R build/DrumTech_artefacts/Release/AU/Drum\ Sampler\ 2.component \
   ~/Library/Audio/Plug-Ins/Components/
 
-cp -R build/DrumSampler2_artefacts/Release/VST3/Drum\ Sampler\ 2.vst3 \
+cp -R build/DrumTech_artefacts/Release/VST3/Drum\ Sampler\ 2.vst3 \
   ~/Library/Audio/Plug-Ins/VST3/
 
 # Code sign (required for macOS)

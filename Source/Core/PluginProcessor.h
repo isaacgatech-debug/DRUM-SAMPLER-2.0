@@ -4,13 +4,13 @@
 #include "../Mixer/MixerChannel.h"
 #include "../Mixer/BusManager.h"
 
-class DrumSampler2Editor;
+class DrumTechEditor;
 
-class DrumSampler2Processor : public juce::AudioProcessor
+class DrumTechProcessor : public juce::AudioProcessor
 {
 public:
-    DrumSampler2Processor();
-    ~DrumSampler2Processor() override;
+    DrumTechProcessor();
+    ~DrumTechProcessor() override;
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -65,5 +65,5 @@ private:
     
     juce::File lastLoadedFolder;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrumSampler2Processor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrumTechProcessor)
 };

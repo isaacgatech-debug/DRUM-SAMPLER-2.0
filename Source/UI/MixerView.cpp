@@ -67,7 +67,7 @@ void MixerView::createChannelStrips()
     }
 }
 
-void MixerView::setProcessor(DrumSampler2Processor* proc)
+void MixerView::setProcessor(DrumTechProcessor* proc)
 {
     processor = proc;
     for (auto& strip : channelStrips)

@@ -119,7 +119,7 @@ if (logEntries.size() > maxLogEntries)
 ### Export Format
 
 ```
-Drum Sampler 2.0 - Error Log
+Drum Tech - Error Log
 Generated: 2026-03-21 12:30:45
 Total Entries: 150
 Errors: 5
@@ -169,8 +169,8 @@ void loadSample(const juce::File& file) {
 ### In Plugin Initialization
 
 ```cpp
-DrumSampler2Processor::DrumSampler2Processor() {
-    LOG_INFO("Drum Sampler 2.0 initializing...");
+DrumTechProcessor::DrumTechProcessor() {
+    LOG_INFO("Drum Tech initializing...");
     
     try {
         samplerEngine.prepare(44100.0, 512);
@@ -203,7 +203,7 @@ void buttonClicked() {
 
 1. **Open Plugin**: Launch in DAW or standalone
 2. **Click BUGS Button**: Debug console should appear
-3. **Check Initial Log**: Should see "Drum Sampler 2.0 initialized"
+3. **Check Initial Log**: Should see "Drum Tech initialized"
 4. **Trigger Error**: Try loading invalid file
 5. **Verify Error Count**: BUGS button should show count
 6. **Test Filters**: Use dropdown to filter by level
@@ -285,7 +285,7 @@ When ready for stable release:
 ## Example Log Session
 
 ```
-[12:30:00] [INFO] PluginProcessor.cpp: Drum Sampler 2.0 initialized
+[12:30:00] [INFO] PluginProcessor.cpp: Drum Tech initialized
 [12:30:01] [INFO] PluginEditor.cpp: Debug console opened
 [12:30:05] [INFO] SamplerEngine.cpp: Loading samples from folder
 [12:30:06] [WARNING] DrumVoice.cpp: Sample rate mismatch, resampling

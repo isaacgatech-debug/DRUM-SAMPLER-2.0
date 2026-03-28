@@ -5,7 +5,7 @@
 #include "ChannelStrip.h"
 #include "PluginColors.h"
 
-class DrumSampler2Processor;
+class DrumTechProcessor;
 
 /**
  * Spacious analog console mixer.
@@ -26,7 +26,7 @@ public:
     void paint  (juce::Graphics& g) override;
     void resized() override;
 
-    void setProcessor(DrumSampler2Processor* proc);
+    void setProcessor(DrumTechProcessor* proc);
 
 private:
     void timerCallback() override;
@@ -34,7 +34,7 @@ private:
     void drawSidebar (juce::Graphics& g, juce::Rectangle<float> bounds);
     void drawMasterSection(juce::Graphics& g, juce::Rectangle<float> bounds);
 
-    DrumSampler2Processor* processor = nullptr;
+    DrumTechProcessor* processor = nullptr;
 
     std::array<std::unique_ptr<ChannelStrip>, numChannels> channelStrips;
 

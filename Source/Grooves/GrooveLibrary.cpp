@@ -255,6 +255,6 @@ juce::String GrooveLibrary::generateRhythmSignature(const juce::MidiMessageSeque
 juce::File GrooveLibrary::getFavoritesFile() const
 {
     return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-        .getChildFile("DrumSampler2")
+        .getChildFile("DrumTech")
         .getChildFile("Favorites.txt");
 }

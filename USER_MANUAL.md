@@ -1,4 +1,4 @@
-# Drum Sampler 2.0 - User Manual
+# Drum Tech - User Manual
 
 **Version**: 2.0.0  
 **Date**: March 21, 2026  
@@ -26,7 +26,7 @@
 
 ## Introduction
 
-Drum Sampler 2.0 is a professional drum production tool that combines:
+Drum Tech is a professional drum production tool that combines:
 
 - **Advanced Sampler Engine**: 64 voices, velocity layers, round-robin
 - **Groove Library**: MIDI pattern management with tap-to-find search
@@ -70,7 +70,7 @@ Drum Sampler 2.0 is a professional drum production tool that combines:
 
 ### First Launch
 
-1. Open Drum Sampler 2.0 in your DAW or as standalone
+1. Open Drum Tech in your DAW or as standalone
 2. Click **"LOAD SAMPLES"** to select your drum sample folder
 3. The plugin will scan and load all compatible audio files
 4. Start playing!
@@ -293,7 +293,7 @@ Automatically classifies detected hits as:
 4. Choose category
 5. Click "Save"
 
-**Preset Location**: `~/Library/Application Support/DrumSampler2/Presets/`
+**Preset Location**: `~/Library/Application Support/DrumTech/Presets/`
 
 ### Loading Presets
 
@@ -437,10 +437,10 @@ Automatically classifies detected hits as:
 ## Support
 
 ### Resources
-- **Website**: www.drumsampler2.com
-- **Email**: support@drumsampler2.com
-- **Forum**: forum.drumsampler2.com
-- **Video Tutorials**: youtube.com/drumsampler2
+- **Website**: www.drumtech.com
+- **Email**: support@drumtech.com
+- **Forum**: forum.drumtech.com
+- **Video Tutorials**: youtube.com/drumtech
 
 ### Reporting Bugs
 1. Click "BUGS" button in plugin
@@ -450,4 +450,4 @@ Automatically classifies detected hits as:
 
 ---
 
-**© 2026 Drum Sampler. All rights reserved.**
+**© 2026 Drum Tech. All rights reserved.**

@@ -56,7 +56,7 @@ Phase 2 focused on completing the built-in effects system and implementing the c
 - **Plugin Scanning**: Automatic discovery of VST3 and AU plugins
   - Scans system default locations
   - Progress callback support for UI updates
-  - Persistent plugin list (saved to `~/Library/Application Support/DrumSampler2/PluginList.xml`)
+  - Persistent plugin list (saved to `~/Library/Application Support/DrumTech/PluginList.xml`)
   
 - **Plugin Search**: 
   - Search by name, manufacturer, or category
@@ -158,9 +158,9 @@ MixerChannel Insert Slot
 ## Build Verification
 
 ✅ **All targets compiled successfully**:
-- AU: `build/DrumSampler2_artefacts/Release/AU/Drum Sampler 2.component`
-- VST3: `build/DrumSampler2_artefacts/Release/VST3/Drum Sampler 2.vst3`
-- Standalone: `build/DrumSampler2_artefacts/Release/Standalone/Drum Sampler 2.app`
+- AU: `build/DrumTech_artefacts/Release/AU/Drum Tech.component`
+- VST3: `build/DrumTech_artefacts/Release/VST3/Drum Tech.vst3`
+- Standalone: `build/DrumTech_artefacts/Release/Standalone/Drum Tech.app`
 
 **Build Time**: ~30 seconds (incremental)  
 **Warnings**: None  
@@ -305,7 +305,7 @@ With Phase 2 complete, the next focus areas are:
 
 ## Conclusion
 
-Phase 2 is **100% functionally complete**. The Drum Sampler 2.0 now has:
+Phase 2 is **100% functionally complete**. The Drum Tech now has:
 
 ✅ Complete built-in effects suite (5 effects)  
 ✅ Full 3rd party plugin hosting capability  

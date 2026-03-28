@@ -118,7 +118,7 @@ public:
         std::lock_guard<std::mutex> lock(logMutex);
         
         juce::String output;
-        output << "Drum Sampler 2.0 - Error Log\n";
+        output << "Drum Tech - Error Log\n";
         output << "Generated: " << juce::Time::getCurrentTime().toString(true, true, true, true) << "\n";
         output << "Total Entries: " << logEntries.size() << "\n";
         output << "Errors: " << errorCount << "\n";

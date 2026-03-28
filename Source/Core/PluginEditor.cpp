@@ -1,7 +1,7 @@
 #include "PluginEditor.h"
 #include "../UI/ThemeManager.h"
 
-DrumSampler2Editor::DrumSampler2Editor(DrumSampler2Processor& p)
+DrumTechEditor::DrumTechEditor(DrumTechProcessor& p)
     : AudioProcessorEditor(&p), processor(p)
 {
     setSize(1400, 900);
@@ -85,14 +85,14 @@ DrumSampler2Editor::DrumSampler2Editor(DrumSampler2Processor& p)
     resized();
 }
 
-DrumSampler2Editor::~DrumSampler2Editor()
+DrumTechEditor::~DrumTechEditor()
 {
     ErrorLogger::getInstance().removeListener(this);
     removeKeyListener(this);
 }
 
 //==============================================================================
-void DrumSampler2Editor::applyTheme()
+void DrumTechEditor::applyTheme()
 {
     auto& tm = ThemeManager::get();
     auto bgCol     = tm.bg();
@@ -118,7 +118,7 @@ void DrumSampler2Editor::applyTheme()
     juce::ignoreUnused(bgCol, mutedCol, textCol2);
 }
 
-void DrumSampler2Editor::showKitPopupMenu()
+void DrumTechEditor::showKitPopupMenu()
 {
     juce::PopupMenu menu;
     menu.addSectionHeader("Select Kit");
@@ -159,7 +159,7 @@ void DrumSampler2Editor::showKitPopupMenu()
 }
 
 //==============================================================================
-void DrumSampler2Editor::paint(juce::Graphics& g)
+void DrumTechEditor::paint(juce::Graphics& g)
 {
     auto& tm = ThemeManager::get();
 
@@ -239,7 +239,7 @@ void DrumSampler2Editor::paint(juce::Graphics& g)
     paintTabBar(g, {0, 0, getWidth(), topNavH});
 }
 
-void DrumSampler2Editor::paintTabBar(juce::Graphics& g, juce::Rectangle<int>)
+void DrumTechEditor::paintTabBar(juce::Graphics& g, juce::Rectangle<int>)
 {
     juce::TextButton* tabs[] = { &tabKit, &tabMixer, &tabTrigger, &tabGrooves };
     for (int i = 0; i < 4; ++i)
@@ -258,7 +258,7 @@ void DrumSampler2Editor::paintTabBar(juce::Graphics& g, juce::Rectangle<int>)
 }
 
 //==============================================================================
-void DrumSampler2Editor::resized()
+void DrumTechEditor::resized()
 {
     auto area = getLocalBounds();
     auto topNavArea = area.removeFromTop(topNavH);
@@ -307,14 +307,14 @@ void DrumSampler2Editor::resized()
 }
 
 //==============================================================================
-void DrumSampler2Editor::switchTab(int tab)
+void DrumTechEditor::switchTab(int tab)
 {
     activeTab = tab;
     applyTheme();
     resized();
 }
 
-bool DrumSampler2Editor::keyPressed(const juce::KeyPress& key, juce::Component*)
+bool DrumTechEditor::keyPressed(const juce::KeyPress& key, juce::Component*)
 {
     if (key == juce::KeyPress('d', juce::ModifierKeys::ctrlModifier
                                  | juce::ModifierKeys::shiftModifier, 0))
@@ -325,7 +325,7 @@ bool DrumSampler2Editor::keyPressed(const juce::KeyPress& key, juce::Component*)
     return false;
 }
 
-void DrumSampler2Editor::toggleDebugConsole()
+void DrumTechEditor::toggleDebugConsole()
 {
     debugConsoleVisible = !debugConsoleVisible;
     if (debugConsoleVisible)
@@ -346,11 +346,11 @@ void DrumSampler2Editor::toggleDebugConsole()
     repaint();
 }
 
-void DrumSampler2Editor::updateStatus()
+void DrumTechEditor::updateStatus()
 {
     int n = processor.getNumLoadedSamples();
     if (n > 0) LOG_INFO("Loaded " + juce::String(n) + " samples");
     else        LOG_WARNING("No samples loaded");
 }
 
-void DrumSampler2Editor::logUpdated() {}
+void DrumTechEditor::logUpdated() {}

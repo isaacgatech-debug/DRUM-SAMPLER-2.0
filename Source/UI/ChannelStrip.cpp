@@ -344,7 +344,7 @@ void ChannelStrip::showMeterMenu()
 }
 
 //==============================================================================
-void ChannelStrip::setProcessor(DrumSampler2Processor* proc) { processor = proc; }
+void ChannelStrip::setProcessor(DrumTechProcessor* proc) { processor = proc; }
 
 void ChannelStrip::updateMeter(float level, float peak)
 {

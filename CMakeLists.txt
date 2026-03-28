@@ -1,14 +1,35 @@
 cmake_minimum_required(VERSION 3.22)
-project(DrumSampler2 VERSION 2.0.0)
+project(DrumTech VERSION 2.0.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Add JUCE
-add_subdirectory(/tmp/JUCE-8.0.4 ${CMAKE_BINARY_DIR}/JUCE)
+# JUCE 8.0.4: override with -DJUCE_PATH=/path/to/JUCE or place a copy at ThirdParty/JUCE
+set(_drumtech_juce_dir "")
+if(DEFINED JUCE_PATH AND IS_DIRECTORY "${JUCE_PATH}" AND EXISTS "${JUCE_PATH}/CMakeLists.txt")
+    set(_drumtech_juce_dir "${JUCE_PATH}")
+elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/JUCE/CMakeLists.txt")
+    set(_drumtech_juce_dir "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/JUCE")
+endif()
+
+set(JUCE_BUILD_EXAMPLES OFF CACHE BOOL "Build JUCE examples" FORCE)
+set(JUCE_BUILD_EXTRAS OFF CACHE BOOL "Build JUCE extras" FORCE)
+
+if(_drumtech_juce_dir)
+    add_subdirectory("${_drumtech_juce_dir}" "${CMAKE_BINARY_DIR}/JUCE-build")
+else()
+    include(FetchContent)
+    FetchContent_Declare(
+        juce
+        GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
+        GIT_TAG 8.0.4
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(juce)
+endif()
 
 # Define plugin
-juce_add_plugin(DrumSampler2
+juce_add_plugin(DrumTech
     COMPANY_NAME "Gridlock"
     PLUGIN_MANUFACTURER_CODE Dsmp
     PLUGIN_CODE Ds2p
@@ -28,14 +49,14 @@ juce_add_plugin(DrumSampler2
 )
 
 # Binary resources
-juce_add_binary_data(DrumSampler2Resources
+juce_add_binary_data(DrumTechResources
     SOURCES
         Resources/Backdrops/drum-backdrop.png
         "Resources/LOGO/Gridlock Logo - White.png"
 )
 
 # Source files
-target_sources(DrumSampler2 PRIVATE
+target_sources(DrumTech PRIVATE
     # Core
     Source/Core/PluginProcessor.cpp
     Source/Core/PluginEditor.cpp
@@ -104,7 +125,7 @@ target_sources(DrumSampler2 PRIVATE
 )
 
 # Compile definitions
-target_compile_definitions(DrumSampler2 PUBLIC
+target_compile_definitions(DrumTech PUBLIC
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0
@@ -116,13 +137,14 @@ target_compile_definitions(DrumSampler2 PUBLIC
 )
 
 # Link JUCE modules
-target_link_libraries(DrumSampler2 PRIVATE
+target_link_libraries(DrumTech PRIVATE
     juce::juce_audio_utils
     juce::juce_audio_formats
     juce::juce_audio_processors
     juce::juce_gui_basics
+    juce::juce_gui_extra
     juce::juce_dsp
-    DrumSampler2Resources
+    DrumTechResources
     PUBLIC
     juce::juce_recommended_config_flags
     juce::juce_recommended_lto_flags
@@ -130,6 +152,6 @@ target_link_libraries(DrumSampler2 PRIVATE
 )
 
 # Include binary data headers
-target_include_directories(DrumSampler2 PRIVATE 
-    ${CMAKE_BINARY_DIR}/juce_binarydata_DrumSampler2Resources/JuceLibraryCode
+target_include_directories(DrumTech PRIVATE 
+    ${CMAKE_BINARY_DIR}/juce_binarydata_DrumTechResources/JuceLibraryCode
 )

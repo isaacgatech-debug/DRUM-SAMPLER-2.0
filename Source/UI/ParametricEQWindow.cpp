@@ -174,7 +174,7 @@ void ParametricEQEditor::paint(juce::Graphics& g)
     g.setColour(tm.surface());
     g.fillRect(getLocalBounds());
 
-    drawGrid(da.reduced(0), g, da);
+    drawGrid(g, da);
     drawSpectrumFill(g, da);
     drawResponseCurve(g, da);
     drawNodes(g, da);
@@ -235,10 +235,6 @@ void ParametricEQEditor::drawGrid(juce::Graphics& g, juce::Rectangle<float> area
     }
 }
 
-void ParametricEQEditor::drawGrid(juce::Graphics&, juce::Rectangle<float>)
-{
-    // unused overload — see paint()
-}
 
 void ParametricEQEditor::drawSpectrumFill(juce::Graphics& g, juce::Rectangle<float> area)
 {

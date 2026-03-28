@@ -1,7 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-DrumSampler2Processor::DrumSampler2Processor()
+DrumTechProcessor::DrumTechProcessor()
     : AudioProcessor(BusesProperties()
                      .withInput("Input", juce::AudioChannelSet::stereo(), true)
                      .withOutput("Output", juce::AudioChannelSet::stereo(), true))
@@ -24,11 +24,11 @@ DrumSampler2Processor::DrumSampler2Processor()
     samplerEngine.prepareToPlay(44100.0, 512);
 }
 
-DrumSampler2Processor::~DrumSampler2Processor()
+DrumTechProcessor::~DrumTechProcessor()
 {
 }
 
-void DrumSampler2Processor::prepareToPlay(double sampleRate, int samplesPerBlock)
+void DrumTechProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     samplerEngine.prepareToPlay(sampleRate, samplesPerBlock);
     busManager.prepare(sampleRate, samplesPerBlock);
@@ -39,11 +39,11 @@ void DrumSampler2Processor::prepareToPlay(double sampleRate, int samplesPerBlock
     }
 }
 
-void DrumSampler2Processor::releaseResources()
+void DrumTechProcessor::releaseResources()
 {
 }
 
-void DrumSampler2Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void DrumTechProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
     
@@ -125,18 +125,18 @@ void DrumSampler2Processor::processBlock(juce::AudioBuffer<float>& buffer, juce:
         buffer.addSample(ch, 0, 1.0e-10f);
 }
 
-juce::AudioProcessorEditor* DrumSampler2Processor::createEditor()
+juce::AudioProcessorEditor* DrumTechProcessor::createEditor()
 {
-    return new DrumSampler2Editor(*this);
+    return new DrumTechEditor(*this);
 }
 
-void DrumSampler2Processor::getStateInformation(juce::MemoryBlock& destData)
+void DrumTechProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     juce::MemoryOutputStream stream(destData, true);
     stream.writeString(lastLoadedFolder.getFullPathName());
 }
 
-void DrumSampler2Processor::setStateInformation(const void* data, int sizeInBytes)
+void DrumTechProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
     juce::MemoryInputStream stream(data, static_cast<size_t>(sizeInBytes), false);
     juce::String folderPath = stream.readString();
@@ -151,7 +151,7 @@ void DrumSampler2Processor::setStateInformation(const void* data, int sizeInByte
     }
 }
 
-void DrumSampler2Processor::loadSamplesFromFolder(const juce::File& folder)
+void DrumTechProcessor::loadSamplesFromFolder(const juce::File& folder)
 {
     lastLoadedFolder = folder;
     DBG("*** Calling samplerEngine.loadSamplesFromFolder ***");
@@ -159,19 +159,19 @@ void DrumSampler2Processor::loadSamplesFromFolder(const juce::File& folder)
     DBG("*** samplerEngine.loadSamplesFromFolder returned ***");
 }
 
-MixerChannel& DrumSampler2Processor::getMixerChannel(int index)
+MixerChannel& DrumTechProcessor::getMixerChannel(int index)
 {
     return *mixerChannels[juce::jlimit(0, static_cast<int>(mixerChannels.size()) - 1, index)];
 }
 
-MixerChannel* DrumSampler2Processor::getMixerChannelForInput(int inputIndex)
+MixerChannel* DrumTechProcessor::getMixerChannelForInput(int inputIndex)
 {
     if (inputIndex >= 0 && inputIndex < static_cast<int>(mixerChannels.size()))
         return mixerChannels[inputIndex].get();
     return nullptr;
 }
 
-void DrumSampler2Processor::triggerNote(int midiNote, int velocity)
+void DrumTechProcessor::triggerNote(int midiNote, int velocity)
 {
     DBG("*** triggerNote ENTER - note: " << midiNote << ", velocity: " << velocity << " ***");
     
@@ -188,5 +188,5 @@ void DrumSampler2Processor::triggerNote(int midiNote, int velocity)
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new DrumSampler2Processor();
+    return new DrumTechProcessor();
 }

@@ -1,4 +1,4 @@
-# Drum Sampler 2.0 - Release Checklist
+# Drum Tech - Release Checklist
 
 **Version**: 2.0.0  
 **Target Release Date**: TBD  
@@ -117,14 +117,14 @@ add_compile_definitions(
 
 2. **Verify Binaries**
    ```bash
-   codesign -dv --verbose=4 "build/DrumSampler2.component"
-   codesign -dv --verbose=4 "build/DrumSampler2.vst3"
+   codesign -dv --verbose=4 "build/DrumTech_artefacts/Release/AU/Drum Tech.component"
+   codesign -dv --verbose=4 "build/DrumTech_artefacts/Release/VST3/Drum Tech.vst3"
    ```
 
 3. **Notarize**
    ```bash
-   xcrun notarytool submit DrumSampler2.zip --wait
-   xcrun stapler staple "DrumSampler2.component"
+   xcrun notarytool submit DrumTech.zip --wait
+   xcrun stapler staple "build/DrumTech_artefacts/Release/AU/Drum Tech.component"
    ```
 
 ---
@@ -147,10 +147,10 @@ add_compile_definitions(
 ### Package Contents
 
 ```
-DrumSampler2_v2.0.0_macOS.pkg
-├── Drum Sampler 2.component (AU)
-├── Drum Sampler 2.vst3 (VST3)
-├── Drum Sampler 2.app (Standalone)
+DrumTech_v2.0.0_macOS.pkg
+├── Drum Tech.component (AU)
+├── Drum Tech.vst3 (VST3)
+├── Drum Tech.app (Standalone)
 ├── Presets/
 │   ├── Rock/
 │   ├── Jazz/
@@ -305,10 +305,10 @@ git push origin release/2.0.0
 
 ### Support Channels
 
-- Email: support@drumsampler2.com
-- Forum: forum.drumsampler2.com
-- Discord: discord.gg/drumsampler2
-- GitHub Issues: github.com/drumsampler2/issues
+- Email: support@drumtech.com
+- Forum: forum.drumtech.com
+- Discord: discord.gg/drumtech
+- GitHub Issues: github.com/drumtech/issues
 
 ### Metrics to Track
 

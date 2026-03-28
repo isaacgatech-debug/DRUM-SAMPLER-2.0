@@ -102,6 +102,6 @@ void PluginManager::loadPluginList()
 juce::File PluginManager::getPluginListFile() const
 {
     return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-        .getChildFile("DrumSampler2")
+        .getChildFile("DrumTech")
         .getChildFile("PluginList.xml");
 }

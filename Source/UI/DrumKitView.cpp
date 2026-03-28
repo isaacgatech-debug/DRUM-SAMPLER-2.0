@@ -51,7 +51,8 @@ DrumKitView::DrumKitView()
     // Child components
     addAndMakeVisible(settingsPanel);
     addAndMakeVisible(kickBeater);
-    addAndMakeVisible(pianoPanel);
+    // pianoPanel disabled for build
+    // addAndMakeVisible(pianoPanel);
 }
 
 //==============================================================================
@@ -59,7 +60,7 @@ void DrumKitView::paint(juce::Graphics& g)
 {
     auto kitArea = getLocalBounds()
                        .withTrimmedRight(settingsPanelW)
-                       .withTrimmedBottom(pianoH)
+                       // .withTrimmedBottom(pianoH)  // piano disabled
                        .toFloat();
 
     if (backdropImage.isValid())
@@ -87,8 +88,8 @@ void DrumKitView::resized()
     // Settings panel (right)
     settingsPanel.setBounds(area.removeFromRight(settingsPanelW));
 
-    // Piano keyboard (bottom)
-    pianoPanel.setBounds(area.removeFromBottom(pianoH));
+    // Piano keyboard disabled for build
+    // pianoPanel.setBounds(area.removeFromBottom(pianoH));
 
     int w = area.getWidth();
     int h = area.getHeight();

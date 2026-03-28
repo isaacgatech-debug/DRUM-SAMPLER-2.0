@@ -1,12 +1,12 @@
-# Drum Sampler 2.0
+# Drum Tech
 
-A professional drum sampler plugin with groove library, audio-to-MIDI triggering, advanced mixer with 3rd party plugin hosting, and multi-bus routing capabilities.
+**Drum Tech** is a professional drum production plugin with groove library, audio-to-MIDI triggering, advanced mixer with third-party plugin hosting, and multi-bus routing.
 
 ## Project Status
 
 **Phase 1: Foundation** - In Progress
 
-This is the initial implementation of the Drum Sampler 2.0 architecture as outlined in the comprehensive development plan.
+This is the initial implementation of the Drum Tech architecture as outlined in the comprehensive development plan.
 
 ## Current Features (Phase 1)
 
@@ -48,7 +48,17 @@ This is the initial implementation of the Drum Sampler 2.0 architecture as outli
 - macOS 10.15 or later
 - Xcode 14.0+
 - CMake 3.22+
-- JUCE 8.0.4 (should be located at `/tmp/JUCE-8.0.4`)
+- Git (first configure downloads JUCE **8.0.4** via CMake FetchContent; offline builds can use a local JUCE — see below)
+
+**JUCE location (pick one):**
+
+1. **Default** — no extra setup; CMake fetches [JUCE 8.0.4](https://github.com/juce-framework/JUCE) into the build tree.
+2. **Local clone** — `-DJUCE_PATH=/absolute/path/to/JUCE` (must contain JUCE’s root `CMakeLists.txt`).
+3. **Vendor in repo** — put JUCE at `ThirdParty/JUCE/` (same layout as the upstream repo).
+
+The built plugin product name is **Drum Tech** (see `PRODUCT_NAME` in `CMakeLists.txt`).
+
+**CMake / Git:** This repo does not ignore `*.cmake` globally, so optional CMake modules under something like `cmake/` stay visible to Git if you add them. Generated CMake junk is expected only under `build/` or, if you ever configure in-tree, at the repository root (those root files are ignored explicitly).
 
 ### Build Steps
 
@@ -59,18 +69,19 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 # Build
 cmake --build build --config Release -j4
 
-# Install plugins (optional)
-cp -R build/DrumSampler2_artefacts/Release/AU/Drum\ Sampler\ 2.component \
+# Install plugins (optional) — confirm exact names under build/DrumTech_artefacts/Release/
+cp -R "build/DrumTech_artefacts/Release/AU/Drum Tech.component" \
   ~/Library/Audio/Plug-Ins/Components/
-cp -R build/DrumSampler2_artefacts/Release/VST3/Drum\ Sampler\ 2.vst3 \
+cp -R "build/DrumTech_artefacts/Release/VST3/Drum Tech.vst3" \
   ~/Library/Audio/Plug-Ins/VST3/
 ```
 
 ## Project Structure
 
 ```
-DrumSampler2/
+DrumTech/
 ├── CMakeLists.txt
+├── ThirdParty/JUCE/   # optional; local JUCE checkout
 ├── Source/
 │   ├── Core/              # Plugin processor and editor
 │   ├── Sampler/           # Sample engine and voice management

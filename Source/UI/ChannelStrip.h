@@ -5,7 +5,7 @@
 #include "PluginColors.h"
 #include "ParametricEQWindow.h"
 
-class DrumSampler2Processor;
+class DrumTechProcessor;
 
 /**
  * Pro Tools inspired channel strip (100px wide).
@@ -27,7 +27,7 @@ public:
     void mouseDown     (const juce::MouseEvent& e) override;
     void mouseDoubleClick(const juce::MouseEvent& e) override;
 
-    void setProcessor(DrumSampler2Processor* proc);
+    void setProcessor(DrumTechProcessor* proc);
     void updateMeter(float level, float peak);
 
     int          getChannelIndex() const { return index; }
@@ -62,7 +62,7 @@ private:
     int          index;
     juce::String name;
     juce::String shortName;
-    DrumSampler2Processor* processor = nullptr;
+    DrumTechProcessor* processor = nullptr;
     juce::Colour channelColor;
 
     MeterType meterType = MeterType::Peak;
