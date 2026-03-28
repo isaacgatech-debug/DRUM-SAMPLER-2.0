@@ -50,6 +50,32 @@ TriggerUI::TriggerChannel::TriggerChannel(const juce::String& micName)
     playBtn.setColour(juce::TextButton::buttonColourId,   juce::Colour(PluginColors::pluginSurface));
     playBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(PluginColors::accent));
     playBtn.setColour(juce::TextButton::textColourOffId,  juce::Colour(PluginColors::textPrimary));
+    playBtn.onClick = [this]
+    {
+        if (audioBuffer.getNumSamples() == 0 || triggerEngine == nullptr)
+        {
+            playBtn.setToggleState(false, juce::dontSendNotification);
+            return;
+        }
+
+        if (playBtn.getToggleState())
+        {
+            const auto tempFile = juce::File::createTempFile(".wav");
+            {
+                juce::WavAudioFormat wav;
+                std::unique_ptr<juce::AudioFormatWriter> writer(
+                    wav.createWriterFor(new juce::FileOutputStream(tempFile),
+                                        audioSampleRate,
+                                        static_cast<unsigned int>(audioBuffer.getNumChannels()),
+                                        16, {}, 0));
+                if (writer != nullptr)
+                    writer->writeFromAudioSampleBuffer(audioBuffer, 0, audioBuffer.getNumSamples());
+            }
+            triggerPreviewResults.clear();
+            triggerEngine->processAudioFile(tempFile, triggerPreviewResults);
+            tempFile.deleteFile();
+        }
+    };
     addAndMakeVisible(playBtn);
 
     // Expand / EQ toggle
@@ -83,6 +109,11 @@ TriggerUI::TriggerChannel::TriggerChannel(const juce::String& micName)
     thresholdSlider.setColour(juce::Slider::textBoxTextColourId,       juce::Colour(PluginColors::textPrimary));
     thresholdSlider.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(PluginColors::pluginSurface));
     thresholdSlider.setColour(juce::Slider::textBoxOutlineColourId,    juce::Colour(PluginColors::pluginBorder));
+    thresholdSlider.onValueChange = [this]
+    {
+        if (triggerEngine != nullptr)
+            triggerEngine->setThreshold(static_cast<float>(thresholdSlider.getValue()));
+    };
     addAndMakeVisible(thresholdSlider);
 
     thresholdLabel.setText("Threshold", juce::dontSendNotification);
@@ -353,7 +384,7 @@ void TriggerUI::resized()
 
     for (int i = 0; i < 8; ++i)
     {
-        int rowH = TriggerChannel::rowH;
+        int rowH = channels[i]->isExpanded() ? TriggerChannel::expandedH : TriggerChannel::rowH;
         channels[i]->setBounds(margin, totalH + margin,
                                area.getWidth() - margin * 2, rowH);
         totalH += rowH + margin;
@@ -369,6 +400,16 @@ bool TriggerUI::isInterestedInFileDrag(const juce::StringArray& files)
             f.endsWithIgnoreCase(".aiff") || f.endsWithIgnoreCase(".mp3"))
             return true;
     return false;
+}
+
+void TriggerUI::setAudioTriggerEngine(AudioTriggerEngine* engine)
+{
+    triggerEngine = engine;
+    for (auto& channel : channels)
+    {
+        if (channel)
+            channel->setTriggerEngine(engine);
+    }
 }
 
 void TriggerUI::fileDragEnter(const juce::StringArray& files, int x, int y)

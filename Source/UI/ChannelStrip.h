@@ -4,6 +4,7 @@
 #include "VUMeter.h"
 #include "PluginColors.h"
 #include "ParametricEQWindow.h"
+#include <array>
 
 class DrumTechProcessor;
 
@@ -58,6 +59,7 @@ private:
 
     void openEQWindow();
     void showMeterMenu();
+    void showInsertMenu(int slotIndex);
 
     int          index;
     juce::String name;
@@ -88,6 +90,7 @@ private:
 
     // Layout rects computed in resized() — used for hit testing
     juce::Rectangle<int> eqSlotRect;     // double-click → EQ window
+    std::array<juce::Rectangle<int>, 4> insertSlotRects;
     juce::Rectangle<int> vuRect;         // right-click  → meter type menu
     juce::Rectangle<int> faderRect;
     juce::Rectangle<int> insertsStartY;  // not rect but tracked via resized

@@ -1,7 +1,10 @@
 #include "ChannelStrip.h"
 #include "../Core/PluginProcessor.h"
+#include "../Core/ErrorLogger.h"
 #include "../Mixer/MixerChannel.h"
+#include "../Effects/ThirdPartyPluginEffect.h"
 #include "ThemeManager.h"
+#include <map>
 
 ChannelStrip::ChannelStrip(int channelIndex, const juce::String& channelName)
     : index(channelIndex), name(channelName)
@@ -100,6 +103,7 @@ void ChannelStrip::paint(juce::Graphics& g)
         auto slotR = row.removeFromTop(18.0f);
         bool isEQ = (i == 0);
         if (isEQ) eqSlotRect = slotR.toNearestInt();
+        insertSlotRects[static_cast<size_t>(i)] = slotR.toNearestInt();
         drawInsertSlot(g, slotR, i, isEQ);
     }
     row.removeFromTop(2.0f);
@@ -298,6 +302,18 @@ void ChannelStrip::resized()
 //==============================================================================
 void ChannelStrip::mouseDown(const juce::MouseEvent& e)
 {
+    if (e.mods.isRightButtonDown())
+    {
+        for (int slot = 0; slot < static_cast<int>(insertSlotRects.size()); ++slot)
+        {
+            if (insertSlotRects[static_cast<size_t>(slot)].contains(e.getPosition()))
+            {
+                showInsertMenu(slot);
+                return;
+            }
+        }
+    }
+
     // Right-click on VU meter → meter type menu
     if (e.mods.isRightButtonDown() && vuRect.contains(e.getPosition()))
     {
@@ -340,6 +356,70 @@ void ChannelStrip::showMeterMenu()
             else if (result == 3) meterType = MeterType::RMS;
             else if (result == 4) meterType = MeterType::K14;
             else if (result == 5) meterType = MeterType::K20;
+        });
+}
+
+void ChannelStrip::showInsertMenu(int slotIndex)
+{
+    if (processor == nullptr || slotIndex < 0 || slotIndex >= 4)
+        return;
+
+    auto* mixerChannel = processor->getMixerChannelForInput(index);
+    if (mixerChannel == nullptr)
+        return;
+
+    auto& pluginManager = processor->getPluginManager();
+    auto plugins = pluginManager.getAvailablePlugins();
+    if (plugins.empty())
+    {
+        pluginManager.scanForPlugins();
+        plugins = pluginManager.getAvailablePlugins();
+    }
+
+    juce::PopupMenu menu;
+    menu.addSectionHeader("Insert Slot " + juce::String(slotIndex + 1));
+    menu.addItem(1, "Clear Slot");
+    menu.addSeparator();
+
+    int menuId = 100;
+    std::map<int, juce::PluginDescription> menuIdToPlugin;
+    for (const auto& plugin : plugins)
+    {
+        menuIdToPlugin.emplace(menuId, plugin);
+        menu.addItem(menuId, plugin.name + " (" + plugin.manufacturerName + ")");
+        ++menuId;
+        if (menuId > 160)
+            break;
+    }
+
+    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this),
+        [this, slotIndex, mixerChannel, pluginMap = std::move(menuIdToPlugin)](int result)
+        {
+            if (result == 1)
+            {
+                mixerChannel->removePlugin(slotIndex);
+                insertNames[slotIndex] = "—";
+                repaint();
+                return;
+            }
+
+            auto it = pluginMap.find(result);
+            if (it == pluginMap.end() || processor == nullptr)
+                return;
+
+            juce::String errorMessage;
+            auto pluginInstance = processor->getPluginManager().createPluginInstance(
+                it->second, 44100.0, 512, errorMessage);
+            if (pluginInstance == nullptr)
+            {
+                LOG_ERROR("Failed to load plugin " + it->second.name + ": " + errorMessage);
+                return;
+            }
+
+            mixerChannel->loadPlugin(slotIndex,
+                std::make_unique<ThirdPartyPluginEffect>(std::move(pluginInstance)));
+            insertNames[slotIndex] = it->second.name;
+            repaint();
         });
 }
 

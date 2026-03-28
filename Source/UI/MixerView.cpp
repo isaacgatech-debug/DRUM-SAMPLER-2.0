@@ -1,6 +1,7 @@
 #include "MixerView.h"
 #include "../Core/PluginProcessor.h"
 #include "../Mixer/MixerChannel.h"
+#include <string>
 
 MixerView::MixerView()
 {
@@ -55,12 +56,29 @@ void MixerView::createChannelStrips()
                     if (btn == "Mute") mc->setMute(state);
                     else if (btn == "Solo") mc->setSolo(state);
                 }
+
+                const auto parameterId = "mixCh" + std::to_string(ch) + (btn == "Mute" ? "Mute" : "Solo");
+                if (auto* parameter = processor->getAPVTS().getParameter(parameterId))
+                    parameter->setValueNotifyingHost(state ? 1.0f : 0.0f);
             }
         };
 
         channelStrips[i]->onParameterChanged = [this](int ch, const juce::String& param, float val)
         {
-            juce::ignoreUnused(ch, param, val);
+            if (!processor)
+                return;
+
+            const auto base = "mixCh" + std::to_string(ch);
+            if (auto* mixerChannel = processor->getMixerChannelForInput(ch))
+            {
+                if (param == "Pan")
+                    mixerChannel->setPan(val);
+                else if (param == "Level")
+                    mixerChannel->setGain(val);
+            }
+
+            if (auto* parameter = processor->getAPVTS().getParameter(base + (param == "Pan" ? "Pan" : "Level")))
+                parameter->setValueNotifyingHost(parameter->convertTo0to1(val));
         };
 
         stripsContainer.addAndMakeVisible(*channelStrips[i]);

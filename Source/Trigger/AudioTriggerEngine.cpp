@@ -57,7 +57,8 @@ void AudioTriggerEngine::processBlock(const juce::AudioBuffer<float>& buffer, ju
 {
     if (!realTimeMode)
         return;
-    
+
+    const double blockStartTime = currentTime;
     std::vector<OnsetEvent> onsets;
     onsetDetector.processBlock(buffer, onsets);
     
@@ -65,8 +66,14 @@ void AudioTriggerEngine::processBlock(const juce::AudioBuffer<float>& buffer, ju
     
     for (const auto& onset : onsets)
     {
-        int segmentStart = juce::jmax(0, static_cast<int>(onset.timeInSamples) - 100);
+        const int localOnsetSample = static_cast<int>(onset.timeInSamples - blockStartTime);
+        if (localOnsetSample < 0 || localOnsetSample >= buffer.getNumSamples())
+            continue;
+
+        int segmentStart = juce::jmax(0, localOnsetSample - 100);
         int segmentLength = juce::jmin(2048, buffer.getNumSamples() - segmentStart);
+        if (segmentLength <= 0)
+            continue;
         
         auto segment = extractSegment(buffer, segmentStart, segmentLength);
         
@@ -74,7 +81,7 @@ void AudioTriggerEngine::processBlock(const juce::AudioBuffer<float>& buffer, ju
         int midiNote = drumClassifier.getDrumTypeToMIDINote(drumType);
         int velocity = static_cast<int>(juce::jlimit(1.0f, 127.0f, onset.strength * 127.0f));
         
-        int sampleOffset = static_cast<int>(onset.timeInSamples) % buffer.getNumSamples();
+        int sampleOffset = juce::jlimit(0, buffer.getNumSamples() - 1, localOnsetSample);
         midiOut.addEvent(juce::MidiMessage::noteOn(1, midiNote, static_cast<juce::uint8>(velocity)), 
                         sampleOffset);
     }

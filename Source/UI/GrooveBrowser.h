@@ -14,6 +14,8 @@ public:
     
     void setGrooveLibrary(GrooveLibrary* library);
     void setMIDIPlayer(MIDIPlayer* player);
+
+    std::function<void(const GrooveMetadata&)> onAddToTimeline;
     
 private:
     void timerCallback() override;
@@ -44,7 +46,7 @@ private:
     juce::Label statusLabel;
     
     std::vector<GrooveMetadata> filteredGrooves;
-    const GrooveMetadata* selectedGroove = nullptr;
+    int selectedGrooveIndex = -1;
     
     juce::Colour bgColour{0xFF2A2A2A};
     juce::Colour listBgColour{0xFF1A1A1A};
@@ -97,7 +99,7 @@ private:
         {
             if (row >= 0 && row < static_cast<int>(browser.filteredGrooves.size()))
             {
-                browser.selectedGroove = &browser.filteredGrooves[row];
+                browser.selectedGrooveIndex = row;
             }
         }
         

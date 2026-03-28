@@ -20,7 +20,14 @@ void AudioBus::processAudio(juce::AudioBuffer<float>& input)
         buffer.clear();
         return;
     }
-    
+
+    if (input.getNumChannels() != buffer.getNumChannels()
+        || input.getNumSamples() != buffer.getNumSamples())
+    {
+        buffer.setSize(input.getNumChannels(), input.getNumSamples(), false, false, true);
+    }
+
+    buffer.makeCopyOf(input, true);
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
     {
         buffer.applyGain(ch, 0, buffer.getNumSamples(), gain);

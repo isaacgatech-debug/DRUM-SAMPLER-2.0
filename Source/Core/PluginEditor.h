@@ -33,6 +33,12 @@ public:
         for (int note = 0; note < 128; ++note)
             if (processor.checkAndClearMidiNote(note))
                 kitView.triggerPieceVisual(note);
+
+        const auto& player = processor.getMIDIPlayer();
+        transportBar.setBPM(static_cast<float>(player.getTempo()));
+        transportBar.setPositionLabel(
+            juce::String(static_cast<int>(player.getPosition()) + 1).paddedLeft('0', 3)
+            + ":01:000");
     }
 
 private:

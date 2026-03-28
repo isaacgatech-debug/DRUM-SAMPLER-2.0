@@ -28,45 +28,53 @@ void OnsetDetector::processBlock(const juce::AudioBuffer<float>& buffer, std::ve
 {
     const int numSamples = buffer.getNumSamples();
     const int numChannels = buffer.getNumChannels();
-    
+    if (numSamples <= 0 || numChannels <= 0)
+        return;
+
+    std::vector<float> mono(static_cast<size_t>(numSamples), 0.0f);
     for (int ch = 0; ch < numChannels; ++ch)
     {
         const float* channelData = buffer.getReadPointer(ch);
+        for (int i = 0; i < numSamples; ++i)
+            mono[static_cast<size_t>(i)] += channelData[i];
+    }
+    const float channelScale = 1.0f / static_cast<float>(numChannels);
+    for (auto& sample : mono)
+        sample *= channelScale;
+
+    for (int i = 0; i < numSamples; i += hopSize)
+    {
+        int samplesToProcess = juce::jmin(hopSize, numSamples - i);
         
-        for (int i = 0; i < numSamples; i += hopSize)
+        // Fill FFT buffer with windowed data
+        std::fill(fftData.begin(), fftData.end(), 0.0f);
+        
+        for (int j = 0; j < samplesToProcess && j < fftSize; ++j)
         {
-            int samplesToProcess = juce::jmin(hopSize, numSamples - i);
-            
-            // Fill FFT buffer with windowed data
-            std::fill(fftData.begin(), fftData.end(), 0.0f);
-            
-            for (int j = 0; j < samplesToProcess && j < fftSize; ++j)
-            {
-                float window = 0.5f * (1.0f - std::cos(2.0f * juce::MathConstants<float>::pi * j / fftSize));
-                fftData[j] = channelData[i + j] * window;
-            }
-            
-            // Perform FFT
-            fft.performFrequencyOnlyForwardTransform(fftData.data());
-            
-            // Convert to magnitude spectrum
-            std::vector<float> spectrum(fftSize / 2);
-            for (int j = 0; j < fftSize / 2; ++j)
-            {
-                float real = fftData[j * 2];
-                float imag = fftData[j * 2 + 1];
-                spectrum[j] = std::sqrt(real * real + imag * imag);
-            }
-            
-            // Calculate energies in each frequency band
-            calculateBandEnergies(spectrum);
-            
-            // Detect onsets based on band energies
-            detectOnsetsFromBands(static_cast<int>(currentSamplePosition) + i, onsets, ch);
+            float window = 0.5f * (1.0f - std::cos(2.0f * juce::MathConstants<float>::pi * j / fftSize));
+            fftData[j] = mono[static_cast<size_t>(i + j)] * window;
         }
         
-        currentSamplePosition += numSamples;
+        // Perform FFT
+        fft.performFrequencyOnlyForwardTransform(fftData.data());
+        
+        // Convert to magnitude spectrum
+        std::vector<float> spectrum(fftSize / 2);
+        for (int j = 0; j < fftSize / 2; ++j)
+        {
+            float real = fftData[j * 2];
+            float imag = fftData[j * 2 + 1];
+            spectrum[j] = std::sqrt(real * real + imag * imag);
+        }
+        
+        // Calculate energies in each frequency band
+        calculateBandEnergies(spectrum);
+        
+        // Detect onsets based on band energies
+        detectOnsetsFromBands(static_cast<int>(currentSamplePosition) + i, onsets, 0);
     }
+
+    currentSamplePosition += numSamples;
 }
 
 void OnsetDetector::calculateBandEnergies(const std::vector<float>& spectrum)

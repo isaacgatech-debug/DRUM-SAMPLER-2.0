@@ -21,18 +21,24 @@ void BusManager::prepare(double sr, int bs)
 
 void BusManager::processAllBuses(juce::AudioBuffer<float>& masterOutput)
 {
-    for (auto& bus : buses)
+    auto& masterBus = buses[0];
+    masterBus.clear();
+
+    auto& masterBuffer = masterBus.getBuffer();
+    for (int busIndex = 1; busIndex < NUM_BUSES; ++busIndex)
     {
-        if (bus.getBusIndex() == 0)
-        {
-            masterOutput.makeCopyOf(bus.getBuffer());
-            bus.processAudio(masterOutput);
-        }
-        else
-        {
-            bus.processAudio(bus.getBuffer());
-        }
+        auto& bus = buses[busIndex];
+        bus.processAudio(bus.getBuffer());
+        auto& busBuffer = bus.getBuffer();
+
+        const int channels = juce::jmin(masterBuffer.getNumChannels(), busBuffer.getNumChannels());
+        const int samples = juce::jmin(masterBuffer.getNumSamples(), busBuffer.getNumSamples());
+        for (int ch = 0; ch < channels; ++ch)
+            masterBuffer.addFrom(ch, 0, busBuffer, ch, 0, samples);
     }
+
+    masterBus.processAudio(masterBuffer);
+    masterOutput.makeCopyOf(masterBus.getBuffer(), true);
 }
 
 void BusManager::clearAllBuses()

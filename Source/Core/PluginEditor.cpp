@@ -68,6 +68,20 @@ DrumTechEditor::DrumTechEditor(DrumTechProcessor& p)
     // Content views
     kitView.setProcessor(&processor);
     mixerView.setProcessor(&processor);
+    triggerUI.setAudioTriggerEngine(&processor.getTriggerEngine());
+    grooveBrowser.setGrooveLibrary(&processor.getGrooveLibrary());
+    grooveBrowser.setMIDIPlayer(&processor.getMIDIPlayer());
+    grooveBrowser.onAddToTimeline = [this](const GrooveMetadata& groove)
+    {
+        GrooveTimeline::GrooveBlock block;
+        block.name = groove.name;
+        block.durationBars = juce::jmax(1, groove.lengthInBeats / 4);
+        block.type = 0;
+        block.startBar = grooveTimeline.getBlocks().empty()
+            ? 1
+            : grooveTimeline.getBlocks().back().startBar + grooveTimeline.getBlocks().back().durationBars;
+        grooveTimeline.addBlock(block);
+    };
     addAndMakeVisible(kitView);
     addAndMakeVisible(grooveBrowser);
     addAndMakeVisible(mixerView);
@@ -76,6 +90,20 @@ DrumTechEditor::DrumTechEditor(DrumTechProcessor& p)
     // MIDI roll + transport (always visible)
     addAndMakeVisible(grooveTimeline);
     addAndMakeVisible(transportBar);
+    transportBar.onPlay = [this](bool shouldPlay) { processor.setTransportPlaying(shouldPlay); };
+    transportBar.onStop = [this] { processor.setTransportPlaying(false); };
+    transportBar.onLoop = [this](bool shouldLoop) { processor.setTransportLooping(shouldLoop); };
+    transportBar.onRecord = [this](bool shouldRecord) { processor.setTransportRecording(shouldRecord); };
+    transportBar.onTap = [this]
+    {
+        const auto currentTempo = processor.getMIDIPlayer().getTempo();
+        processor.setTransportTempo(static_cast<float>(juce::jlimit(30.0, 300.0, currentTempo + 1.0)));
+    };
+    transportBar.onMasterVolume = [this](float level)
+    {
+        if (auto* parameter = processor.getAPVTS().getParameter("masterLevel"))
+            parameter->setValueNotifyingHost(parameter->convertTo0to1(level));
+    };
 
     ErrorLogger::getInstance().addListener(this);
     addKeyListener(this);
@@ -87,6 +115,7 @@ DrumTechEditor::DrumTechEditor(DrumTechProcessor& p)
 
 DrumTechEditor::~DrumTechEditor()
 {
+    ThemeManager::get().onThemeChanged = nullptr;
     ErrorLogger::getInstance().removeListener(this);
     removeKeyListener(this);
 }

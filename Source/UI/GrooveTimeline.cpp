@@ -24,6 +24,36 @@ GrooveTimeline::GrooveTimeline()
     addAndMakeVisible(zoomInBtn);
     addAndMakeVisible(zoomOutBtn);
 
+    zoomInBtn.onClick = [this]
+    {
+        scrollX = juce::jmax(0, scrollX - barWidth);
+        repaint();
+    };
+    zoomOutBtn.onClick = [this]
+    {
+        scrollX += barWidth;
+        repaint();
+    };
+    cutBtn.onClick = [this]
+    {
+        if (selectedBlock >= 0 && selectedBlock < static_cast<int>(blocks.size()))
+        {
+            blocks.erase(blocks.begin() + selectedBlock);
+            selectedBlock = -1;
+            repaint();
+        }
+    };
+    addTrackBtn.onClick = [this]
+    {
+        const int nextBar = blocks.empty() ? 1 : blocks.back().startBar + blocks.back().durationBars;
+        addBlock({ nextBar, 4, 0, "New Pattern" });
+    };
+    selectBtn.onClick = [this]
+    {
+        selectedBlock = blockAtPoint({ barToX(1), rollRect.getCentreY() });
+        repaint();
+    };
+
     // Seed with example blocks
     blocks.push_back({ 1, 4, 0, "Hats Tight Tip" });
     blocks.push_back({ 5, 2, 1, "Fill" });
@@ -69,7 +99,7 @@ void GrooveTimeline::paint(juce::Graphics& g)
     // Track name label
     g.setFont(PluginFonts::label(10.0f));
     g.setColour(juce::Colour(PluginColors::textPrimary));
-    g.drawText("Track 1", static_cast<int>(trackBarArea.getX() + 160), static_cast<int>(trackBarArea.getY()),
+    g.drawText(trackDropdown.getButtonText(), static_cast<int>(trackBarArea.getX() + 160), static_cast<int>(trackBarArea.getY()),
                80, static_cast<int>(trackBarArea.getHeight()), juce::Justification::centredLeft, false);
 
     drawRuler(g, rulerArea);

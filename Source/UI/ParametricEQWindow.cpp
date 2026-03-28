@@ -499,7 +499,7 @@ ParametricEQWindow::ParametricEQWindow(const juce::String& channelName)
                            juce::DocumentWindow::allButtons)
 {
     setUsingNativeTitleBar(false);
-    setContentNonOwned(&eqEditor, true);
+    setContentNonOwned(&eqEditor, false);
     setResizable(true, false);
     setSize(800, 480);
     centreWithSize(800, 480);

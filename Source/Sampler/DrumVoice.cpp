@@ -1,6 +1,15 @@
 #include "DrumVoice.h"
 #include <cmath>
 
+#ifndef DRUMTECH_AUDIO_DEBUG
+#define DRUMTECH_AUDIO_DEBUG 0
+#endif
+
+#if !DRUMTECH_AUDIO_DEBUG
+#undef DBG
+#define DBG(x) do {} while (false)
+#endif
+
 DrumVoice::DrumVoice()
 {
     juce::ADSR::Parameters params;

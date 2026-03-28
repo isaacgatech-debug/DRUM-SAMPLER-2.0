@@ -76,6 +76,11 @@ TransportBar::TransportBar()
     masterVolKnob.setValue(0.8);
     masterVolKnob.setKnobColor(juce::Colour(PluginColors::accent));
     masterVolKnob.setLabel("VOL");
+    masterVolKnob.onValueChange = [this]
+    {
+        if (onMasterVolume)
+            onMasterVolume(static_cast<float>(masterVolKnob.getValue()));
+    };
     addAndMakeVisible(masterVolKnob);
 }
 

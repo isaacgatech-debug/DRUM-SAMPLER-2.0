@@ -63,6 +63,12 @@ InstrumentSettingsPanel::InstrumentSettingsPanel()
     // MIDI Settings button
     midiSettingsBtn.setColour(juce::TextButton::buttonColourId,  juce::Colour(PluginColors::pluginSurface));
     midiSettingsBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(PluginColors::textPrimary));
+    midiSettingsBtn.onClick = [this]
+    {
+        midiMappingOpen = !midiMappingOpen;
+        resized();
+        repaint();
+    };
     addAndMakeVisible(midiSettingsBtn);
 }
 

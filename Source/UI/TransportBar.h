@@ -41,6 +41,7 @@ public:
     std::function<void(bool)>  onLoop;
     std::function<void(bool)>  onRecord;
     std::function<void()>      onTap;
+    std::function<void(float)> onMasterVolume;
 
 private:
     juce::TextButton loopButton  {"⟳"};

@@ -1,8 +1,16 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <array>
+#include <atomic>
 #include "../Sampler/SamplerEngine.h"
 #include "../Mixer/MixerChannel.h"
 #include "../Mixer/BusManager.h"
+#include "../Grooves/GrooveLibrary.h"
+#include "../Grooves/MIDIPlayer.h"
+#include "../Trigger/AudioTriggerEngine.h"
+#include "../Effects/PluginManager.h"
+#include "StateManager.h"
+#include "PresetManager.h"
 
 class DrumTechEditor;
 
@@ -37,6 +45,8 @@ public:
 
     void loadSamplesFromFolder(const juce::File& folder);
     int getNumLoadedSamples() const { return samplerEngine.getNumSamples(); }
+    juce::AudioProcessorValueTreeState& getAPVTS() { return apvts; }
+    const juce::AudioProcessorValueTreeState& getAPVTS() const { return apvts; }
     
     SamplerEngine& getSamplerEngine() { return samplerEngine; }
     BusManager& getBusManager() { return busManager; }
@@ -44,6 +54,19 @@ public:
     MixerChannel* getMixerChannelForInput(int inputIndex);
     
     void triggerNote(int midiNote, int velocity);
+    void setTransportPlaying(bool shouldPlay);
+    void setTransportLooping(bool shouldLoop);
+    void setTransportRecording(bool shouldRecord);
+    void setTransportTempo(float bpm);
+    void setTriggerThreshold(float threshold);
+    bool saveCurrentPreset(const juce::String& name, const juce::String& category);
+    bool loadPresetByName(const juce::String& name);
+
+    GrooveLibrary& getGrooveLibrary() { return grooveLibrary; }
+    MIDIPlayer& getMIDIPlayer() { return midiPlayer; }
+    AudioTriggerEngine& getTriggerEngine() { return triggerEngine; }
+    PresetManager& getPresetManager() { return presetManager; }
+    PluginManager& getPluginManager() { return pluginManager; }
     
     // Thread-safe way to check if a MIDI note was recently triggered
     bool checkAndClearMidiNote(int midiNote)
@@ -56,12 +79,33 @@ public:
     }
 
 private:
+    static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    void applyMixerParameters();
+
+    struct QueuedNote
+    {
+        juce::uint8 note = 0;
+        juce::uint8 velocity = 0;
+    };
+
+    static constexpr uint32_t kUiMidiQueueSize = 256;
+    bool enqueueUiMidiNote(int midiNote, int velocity) noexcept;
+    int drainUiMidiToBuffer(juce::MidiBuffer& midiMessages, int numSamples) noexcept;
+
+    juce::AudioProcessorValueTreeState apvts;
     SamplerEngine samplerEngine;
-    juce::MidiBuffer pendingMidiMessages;
-    juce::CriticalSection midiLock;
+    std::array<QueuedNote, kUiMidiQueueSize> uiMidiQueue {};
+    std::atomic<uint32_t> uiMidiWrite { 0 };
+    std::atomic<uint32_t> uiMidiRead { 0 };
     std::atomic<bool> recentMidiNotes[128];
     BusManager busManager;
     std::vector<std::unique_ptr<MixerChannel>> mixerChannels;
+    std::array<juce::AudioBuffer<float>, 12> mixerStemBuffers;
+    GrooveLibrary grooveLibrary;
+    MIDIPlayer midiPlayer;
+    AudioTriggerEngine triggerEngine;
+    PresetManager presetManager;
+    PluginManager pluginManager;
     
     juce::File lastLoadedFolder;
 

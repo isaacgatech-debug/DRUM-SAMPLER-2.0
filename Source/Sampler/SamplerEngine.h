@@ -4,6 +4,7 @@
 #include "DrumVoice.h"
 #include <vector>
 #include <map>
+#include <array>
 
 class SamplerEngine
 {
@@ -22,6 +23,10 @@ public:
     void setChannelForNote(int midiNote, int channel);
     
     int getNumSamples() const { return static_cast<int>(samples.size()); }
+    const juce::AudioBuffer<float>& getChannelBuffer(int channelIndex) const
+    {
+        return channelBuffers[juce::jlimit(0, NUM_DRUM_CHANNELS - 1, channelIndex)];
+    }
     
     void noteOn(int midiNote, int velocity);
     void noteOff(int midiNote);
@@ -29,6 +34,7 @@ public:
 private:
     std::vector<DrumSample> samples;
     DrumVoice voices[MAX_VOICES];
+    std::array<juce::AudioBuffer<float>, NUM_DRUM_CHANNELS> channelBuffers;
     
     double currentSampleRate = 44100.0;
     int rrCounters[128] = {};

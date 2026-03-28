@@ -82,7 +82,9 @@ void PluginManager::savePluginList()
     auto xml = knownPlugins.createXml();
     if (xml != nullptr)
     {
-        xml->writeTo(getPluginListFile());
+        auto pluginListFile = getPluginListFile();
+        pluginListFile.getParentDirectory().createDirectory();
+        xml->writeTo(pluginListFile);
     }
 }
 

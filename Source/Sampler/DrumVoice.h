@@ -38,6 +38,7 @@ public:
     void setPitch(float semitones);
     void setVelocityCurve(const VelocityCurve& curve);
     void setOutputChannel(int channel) { outputChannel = channel; }
+    int getOutputChannel() const { return outputChannel; }
     void setSampleRate(double sampleRate) { adsr.setSampleRate(sampleRate); }
     
     bool isActive() const { return active; }

@@ -2,6 +2,15 @@
 #include "../Core/ErrorLogger.h"
 #include <algorithm>
 
+#ifndef DRUMTECH_AUDIO_DEBUG
+#define DRUMTECH_AUDIO_DEBUG 0
+#endif
+
+#if !DRUMTECH_AUDIO_DEBUG
+#undef DBG
+#define DBG(x) do {} while (false)
+#endif
+
 SamplerEngine::SamplerEngine()
 {
     formatManager.registerBasicFormats();
@@ -11,6 +20,19 @@ SamplerEngine::SamplerEngine()
         pitchSettings[i] = 0.0f;
         rrCounters[i] = 0;
     }
+
+    // Default note-to-channel map (11 drum channels)
+    noteToChannel[36] = 0;  // kick
+    noteToChannel[35] = 1;  // kick alt
+    noteToChannel[38] = 2;  // snare
+    noteToChannel[40] = 3;  // snare alt
+    noteToChannel[42] = 4;  // hihat
+    noteToChannel[48] = 5;  // tom 1
+    noteToChannel[45] = 6;  // tom 2
+    noteToChannel[50] = 7;  // tom 3
+    noteToChannel[49] = 8;  // overhead/crash
+    noteToChannel[57] = 9;  // overhead/crash 2
+    noteToChannel[51] = 10; // ride/room
 }
 
 void SamplerEngine::loadSamplesFromFolder(const juce::File& folder)
@@ -103,11 +125,21 @@ void SamplerEngine::prepareToPlay(double sampleRate, int blockSize)
         voices[i].setSampleRate(sampleRate);
         DBG("*** Voice " << i << " sampleRate set to " << sampleRate << " ***");
     }
+
+    for (auto& channelBuffer : channelBuffers)
+    {
+        channelBuffer.setSize(2, blockSize, false, false, true);
+        channelBuffer.clear();
+    }
     DBG("*** SamplerEngine::prepareToPlay EXIT ***");
 }
 
 void SamplerEngine::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
 {
+    buffer.clear();
+    for (auto& channelBuffer : channelBuffers)
+        channelBuffer.clear();
+
     bool hadMidiNote = false;
     
     for (const auto metadata : midi)
@@ -136,8 +168,17 @@ void SamplerEngine::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuf
         if (voice.isActive())
         {
             activeVoices++;
-            voice.process(buffer, 0, buffer.getNumSamples());
+            const int outputChannel = juce::jlimit(0, NUM_DRUM_CHANNELS - 1, voice.getOutputChannel());
+            voice.process(channelBuffers[outputChannel], 0, buffer.getNumSamples());
         }
+    }
+
+    for (const auto& channelBuffer : channelBuffers)
+    {
+        const int channels = juce::jmin(buffer.getNumChannels(), channelBuffer.getNumChannels());
+        const int samples = juce::jmin(buffer.getNumSamples(), channelBuffer.getNumSamples());
+        for (int ch = 0; ch < channels; ++ch)
+            buffer.addFrom(ch, 0, channelBuffer, ch, 0, samples);
     }
     
     if (hadMidiNote)
@@ -215,6 +256,11 @@ void SamplerEngine::noteOn(int midiNote, int velocity)
     int channel = 0;
     if (noteToChannel.find(midiNote) != noteToChannel.end())
         channel = noteToChannel[midiNote];
+
+    if (auto pitchIt = pitchSettings.find(midiNote); pitchIt != pitchSettings.end())
+        freeVoice->setPitch(pitchIt->second);
+    if (auto velIt = velocityCurves.find(midiNote); velIt != velocityCurves.end())
+        freeVoice->setVelocityCurve(velIt->second);
     
     DBG("*** Triggering voice " << voiceIndex << " with gain " << gain << " ***");
     freeVoice->trigger(selectedSample, gain, channel);

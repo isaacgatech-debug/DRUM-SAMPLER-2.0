@@ -57,14 +57,19 @@ GrooveBrowser::GrooveBrowser()
     addAndMakeVisible(scanButton);
     
     previewButton.onClick = [this] {
-        if (selectedGroove)
-            previewGroove(selectedGroove);
+        if (selectedGrooveIndex >= 0 && selectedGrooveIndex < static_cast<int>(filteredGrooves.size()))
+            previewGroove(&filteredGrooves[static_cast<size_t>(selectedGrooveIndex)]);
     };
     addAndMakeVisible(previewButton);
     
     addToTimelineButton.onClick = [this] {
-        if (selectedGroove)
-            LOG_INFO("Add to timeline: " + selectedGroove->name);
+        if (selectedGrooveIndex >= 0 && selectedGrooveIndex < static_cast<int>(filteredGrooves.size()))
+        {
+            const auto& selectedGroove = filteredGrooves[static_cast<size_t>(selectedGrooveIndex)];
+            if (onAddToTimeline)
+                onAddToTimeline(selectedGroove);
+            LOG_INFO("Add to timeline: " + selectedGroove.name);
+        }
     };
     addAndMakeVisible(addToTimelineButton);
     
@@ -182,6 +187,7 @@ void GrooveBrowser::filterGrooves()
         return;
     
     filteredGrooves.clear();
+    selectedGrooveIndex = -1;
     
     auto allGrooves = grooveLibrary->getAllGrooves();
     juce::String searchText = searchBox.getText().toLowerCase();

@@ -29,7 +29,7 @@ public:
     void fileDragEnter (const juce::StringArray& files, int x, int y) override;
     void fileDragExit  (const juce::StringArray& files) override;
 
-    void setAudioTriggerEngine(AudioTriggerEngine* engine) { triggerEngine = engine; }
+    void setAudioTriggerEngine(AudioTriggerEngine* engine);
 
 private:
     static const char* micNames[8];
@@ -51,6 +51,7 @@ private:
 
         void loadAudioFile(const juce::File& file);
         void setTriggerEngine(AudioTriggerEngine* engine) { triggerEngine = engine; }
+        bool isExpanded() const { return freqEditorVisible; }
 
         bool isInterestedInFileDrag(const juce::StringArray& files) override;
         void filesDropped  (const juce::StringArray& files, int x, int y) override;
@@ -85,6 +86,7 @@ private:
         double audioSampleRate = 44100.0;
         bool   isDragOver      = false;
         bool   isPlaying       = false;
+        std::vector<TriggerResult> triggerPreviewResults;
 
         // Channel color (by index)
         juce::Colour chColor{PluginColors::accent};
