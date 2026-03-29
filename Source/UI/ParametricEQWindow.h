@@ -4,13 +4,13 @@
 #include <vector>
 #include <cmath>
 
+class DrumTechProcessor;
+
 /**
- * Pro-Q-3 inspired parametric EQ editor.
- * 20Hz - 20kHz log scale. -24dB to +24dB gain range.
- * Draggable band nodes. Biquad-computed frequency response.
- * Mouse wheel changes Q on selected band.
+ * Parametric EQ editor (8 bands). Scroll wheel adjusts Q on selected band.
+ * Type per band via ComboBox; parameters sync to processor APVTS.
  */
-class ParametricEQEditor : public juce::Component
+class ParametricEQEditor : public juce::Component, private juce::Timer
 {
 public:
     struct Band
@@ -24,7 +24,7 @@ public:
 
         juce::String typeName() const
         {
-            const char* names[] = {"Peak","Low Shelf","High Shelf","Low Pass","High Pass"};
+            const char* names[] = {"Peak", "Low Shelf", "High Shelf", "Low Pass", "High Pass"};
             return names[static_cast<int>(type)];
         }
     };
@@ -41,9 +41,16 @@ public:
     void mouseWheelMove(const juce::MouseEvent& e,
                         const juce::MouseWheelDetails& w) override;
 
+    void setProcessorTarget(DrumTechProcessor* p, int mixerChannelIndex);
+    void pullFromApvts();
+    void pushBandToApvts(int bandIndex);
+
     const std::vector<Band>& getBands() const { return bands; }
 
 private:
+    void timerCallback() override;
+    void typeComboChanged();
+
     juce::Rectangle<float> displayArea() const;
 
     static float freqToX(float freq, float w);
@@ -57,7 +64,6 @@ private:
     void drawResponseCurve(juce::Graphics& g, juce::Rectangle<float> area);
     void drawNodes        (juce::Graphics& g, juce::Rectangle<float> area);
     void drawBandInfoBar  (juce::Graphics& g, juce::Rectangle<float> area);
-    void drawTypeButtons  (juce::Graphics& g, juce::Rectangle<float> area);
 
     int  hitTestBand(juce::Point<float> pt) const;
     void addBand(float freq, float gain);
@@ -70,7 +76,10 @@ private:
     float dragStartFreq = 0.0f;
     float dragStartGain = 0.0f;
 
-    juce::Rectangle<int> typeBtnRect[5]; // type selection buttons
+    DrumTechProcessor* processor = nullptr;
+    int eqChannel = 0;
+
+    juce::ComboBox typeCombo;
 
     static const juce::Colour palette[];
     static const int paletteSize;
@@ -83,14 +92,11 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ParametricEQEditor)
 };
 
-/**
- * Floating DocumentWindow that hosts ParametricEQEditor.
- * Opened by double-clicking the EQ insert slot in ChannelStrip.
- */
+/** Floating window hosting ParametricEQEditor for one mixer channel. */
 class ParametricEQWindow : public juce::DocumentWindow
 {
 public:
-    explicit ParametricEQWindow(const juce::String& channelName);
+    ParametricEQWindow(DrumTechProcessor* processor, int mixerChannelIndex, const juce::String& channelName);
     ~ParametricEQWindow() override = default;
 
     void closeButtonPressed() override { setVisible(false); }

@@ -55,19 +55,19 @@ TransportBar::TransportBar()
     tapButton.onClick = [this] { if (onTap) onTap(); };
 
     timeSigLabel.setText("4/4", juce::dontSendNotification);
-    timeSigLabel.setFont(PluginFonts::mono(13.0f));
+    timeSigLabel.setFont(PluginFonts::mono(15.0f));
     timeSigLabel.setColour(juce::Label::textColourId, juce::Colour(PluginColors::textPrimary));
     timeSigLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(timeSigLabel);
 
     bpmLabel.setText("120", juce::dontSendNotification);
-    bpmLabel.setFont(PluginFonts::mono(13.0f));
+    bpmLabel.setFont(PluginFonts::mono(17.0f));
     bpmLabel.setColour(juce::Label::textColourId, juce::Colour(PluginColors::accent));
     bpmLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(bpmLabel);
 
     positionLabel.setText("001:01:000", juce::dontSendNotification);
-    positionLabel.setFont(PluginFonts::mono(12.0f));
+    positionLabel.setFont(PluginFonts::mono(14.5f));
     positionLabel.setColour(juce::Label::textColourId, juce::Colour(PluginColors::textPrimary));
     positionLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(positionLabel);
@@ -93,16 +93,16 @@ void TransportBar::paint(juce::Graphics& g)
 
 void TransportBar::resized()
 {
-    auto area = getLocalBounds().reduced(4, 4);
-    loopButton.setBounds  (area.removeFromLeft(32).reduced(2));
-    stopButton.setBounds  (area.removeFromLeft(32).reduced(2));
-    playButton.setBounds  (area.removeFromLeft(32).reduced(2));
-    recordButton.setBounds(area.removeFromLeft(32).reduced(2));
-    tapButton.setBounds   (area.removeFromLeft(44).reduced(2));
-    area.removeFromLeft(8);
-    timeSigLabel.setBounds(area.removeFromLeft(36));
-    bpmLabel.setBounds    (area.removeFromLeft(50));
-    area.removeFromLeft(8);
-    positionLabel.setBounds(area.removeFromLeft(100));
-    masterVolKnob.setBounds(area.removeFromRight(36).reduced(1));
+    auto area = getLocalBounds().reduced(8, 6);
+    loopButton.setBounds  (area.removeFromLeft(56).reduced(2));
+    stopButton.setBounds  (area.removeFromLeft(56).reduced(2));
+    playButton.setBounds  (area.removeFromLeft(56).reduced(2));
+    recordButton.setBounds(area.removeFromLeft(50).reduced(2));
+    tapButton.setBounds   (area.removeFromLeft(56).reduced(2));
+    area.removeFromLeft(12);
+    timeSigLabel.setBounds(area.removeFromLeft(44));
+    bpmLabel.setBounds    (area.removeFromLeft(58));
+    area.removeFromLeft(12);
+    positionLabel.setBounds(area.removeFromLeft(118));
+    masterVolKnob.setBounds(area.removeFromRight(64).reduced(2));
 }

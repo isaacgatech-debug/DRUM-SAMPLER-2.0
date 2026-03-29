@@ -29,18 +29,18 @@ public:
         if (onThemeChanged) onThemeChanged();
     }
 
-    // Palette accessors
-    juce::Colour bg()        const { return c(0xFF0D0D0E, 0xFFF2F2F6); }
-    juce::Colour panel()     const { return c(0xFF141416, 0xFFE4E4EA); }
-    juce::Colour surface()   const { return c(0xFF1C1C1F, 0xFFFFFFFF); }
-    juce::Colour surfaceHi() const { return c(0xFF242428, 0xFFF6F6FA); }
-    juce::Colour border()    const { return c(0xFF2C2C32, 0xFFCECED8); }
-    juce::Colour borderHi()  const { return c(0xFF3C3C44, 0xFFB0B0BC); }
-    juce::Colour text()      const { return c(0xFFDDE1E7, 0xFF1A1A2E); }
-    juce::Colour muted()     const { return c(0xFF6B7280, 0xFF8888A0); }
-    juce::Colour dim()       const { return c(0xFF3A3A44, 0xFFCCCCDC); }
-    juce::Colour accent()    const { return juce::Colour(0xFF00C8FF); }
-    juce::Colour accentDim() const { return juce::Colour(0xFF0088CC); }
+    // Palette accessors (dark = Pro Tools–style console; light = neutral studio)
+    juce::Colour bg()        const { return c(0xFF2C2C2C, 0xFFF0F0F0); }
+    juce::Colour panel()     const { return c(0xFF383838, 0xFFE8E8E8); }
+    juce::Colour surface()   const { return c(0xFF404040, 0xFFFFFFFF); }
+    juce::Colour surfaceHi() const { return c(0xFF4A4A4A, 0xFFF8F8F8); }
+    juce::Colour border()    const { return c(0xFF1A1A1A, 0xFFC8C8C8); }
+    juce::Colour borderHi()  const { return c(0xFF5C5C5C, 0xFFB0B0B0); }
+    juce::Colour text()      const { return c(0xFFEAEAEA, 0xFF1A1A1A); }
+    juce::Colour muted()     const { return c(0xFF9A9A9A, 0xFF666666); }
+    juce::Colour dim()       const { return c(0xFF5C5C5C, 0xFF999999); }
+    juce::Colour accent()    const { return juce::Colour(0xFFD4A74A); }
+    juce::Colour accentDim() const { return juce::Colour(0xFF9A7A35); }
 
     std::function<void()> onThemeChanged;
 

@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "PluginColors.h"
 #include "../Grooves/GrooveLibrary.h"
 #include "../Grooves/MIDIPlayer.h"
 
@@ -50,7 +51,7 @@ private:
     
     juce::Colour bgColour{0xFF2A2A2A};
     juce::Colour listBgColour{0xFF1A1A1A};
-    juce::Colour accentColour{0xFFE8A020};
+    juce::Colour accentColour{juce::Colour(PluginColors::accent)};
     
     class GrooveListModel : public juce::ListBoxModel
     {
@@ -76,16 +77,16 @@ private:
                 g.fillAll(juce::Colour(0xFF252525));
             
             g.setColour(juce::Colours::white);
-            g.setFont(14.0f);
+            g.setFont(PluginFonts::label(14.0f));
             
-            auto textArea = juce::Rectangle<int>(5, 0, width - 10, height);
+            auto textArea = juce::Rectangle<int>(8, 0, width - 16, height);
             g.drawText(groove.name, textArea.removeFromLeft(width / 2), 
                       juce::Justification::centredLeft, true);
             
             g.setColour(juce::Colours::lightgrey);
-            g.setFont(12.0f);
+            g.setFont(PluginFonts::mono(12.5f));
             g.drawText(juce::String(groove.tempoBPM) + " BPM", 
-                      textArea.removeFromLeft(80), 
+                      textArea.removeFromLeft(96), 
                       juce::Justification::centredLeft, true);
             
             if (groove.isFavorite)

@@ -8,8 +8,8 @@
 
 /**
  * Per-channel trigger view — HORIZONTAL stacked rows.
- * Each TriggerChannel is a full-width row (100px tall):
- *   130px left panel: name + Import/Clear/Play buttons
+ * Each TriggerChannel is a full-width row (~132px tall collapsed):
+ *   152px left panel: name + Import/Clear/Play buttons
  *   (fills)  center: waveform spanning full width
  *   Threshold slider below waveform inside the row
  *
@@ -58,9 +58,9 @@ private:
         void fileDragEnter (const juce::StringArray& files, int x, int y) override;
         void fileDragExit  (const juce::StringArray& files) override;
 
-        static constexpr int rowH      = 110;  // collapsed row height
-        static constexpr int expandedH = 260;  // row height with freq editor
-        static constexpr int leftW     = 130;  // left button panel width
+        static constexpr int rowH      = 132;  // collapsed row height
+        static constexpr int expandedH = 300;  // row height with freq editor
+        static constexpr int leftW     = 168;  // left button panel width ("Play" text)
 
     private:
         void drawLeftPanel  (juce::Graphics& g, juce::Rectangle<int> area);
@@ -72,8 +72,8 @@ private:
 
         juce::TextButton importBtn{"Import"};
         juce::TextButton clearBtn {"Clear"};
-        juce::TextButton playBtn  {"▶"};
-        juce::TextButton expandBtn{"∨ EQ"};
+        juce::TextButton playBtn  {"Play"};
+        juce::TextButton expandBtn{"v EQ"};
 
         juce::Slider thresholdSlider;
         juce::Label  thresholdLabel;

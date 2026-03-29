@@ -11,6 +11,7 @@ public:
     void processBlock(juce::MidiBuffer& midiMessages, int numSamples);
     
     void loadGroove(const GrooveMetadata* groove);
+    void loadSequence(const juce::MidiMessageSequence& midiSequence, double sourceTempoBpm);
     void play();
     void stop();
     void pause();

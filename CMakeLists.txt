@@ -51,7 +51,8 @@ juce_add_plugin(DrumTech
 # Binary resources
 juce_add_binary_data(DrumTechResources
     SOURCES
-        Resources/Backdrops/drum-backdrop.png
+        "Resources/Backdrops/Drum Tech.jpg"
+        "Resources/Backdrops/Drum Tech (1).jpg"
         "Resources/LOGO/Gridlock Logo - White.png"
 )
 
@@ -86,6 +87,7 @@ target_sources(DrumTech PRIVATE
     Source/Effects/ReverbEffect.cpp
     Source/Effects/DelayEffect.cpp
     Source/Effects/EQEffect.cpp
+    Source/Effects/ParametricEQEffect.cpp
     Source/Effects/CompressorEffect.cpp
     Source/Effects/TransientShaperEffect.cpp
     Source/Effects/PluginManager.cpp
@@ -120,6 +122,8 @@ target_sources(DrumTech PRIVATE
     Source/UI/FrequencyBandEditor.cpp
     Source/UI/GrooveTimeline.cpp
     Source/UI/TransportBar.cpp
+    Source/UI/DrumTechLookAndFeel.cpp
+    Source/UI/SettingsView.cpp
     Source/UI/InstrumentSettingsPanel.cpp
     Source/UI/ParametricEQWindow.cpp
 )

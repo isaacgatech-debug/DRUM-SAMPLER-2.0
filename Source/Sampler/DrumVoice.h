@@ -10,6 +10,11 @@ struct DrumSample
     int rrGroup = 0;
     int velLow = 0;
     int velHigh = 127;
+    /** Mic stem index 0..MicBus::count-1, or -1 to use noteToChannel fallback. */
+    int micStemIndex = -1;
+    juce::String articulationKey;
+    juce::String playingStyleKey; // "sticks" / "brushes" when available
+    juce::String drummerProfileKey;
 };
 
 struct VelocityCurve
@@ -33,7 +38,7 @@ class DrumVoice
 public:
     DrumVoice();
     
-    void trigger(const DrumSample* sample, float gain, int channel = 0);
+    void trigger(const DrumSample* sample, float gain, int outputStem, float micTrimMul);
     void process(juce::AudioBuffer<float>& output, int startSample, int numSamples);
     void setPitch(float semitones);
     void setVelocityCurve(const VelocityCurve& curve);
@@ -48,6 +53,7 @@ private:
     const DrumSample* currentSample = nullptr;
     int position = 0;
     float gain = 1.0f;
+    float micTrimMul = 1.0f;
     bool active = false;
     int outputChannel = 0;
     

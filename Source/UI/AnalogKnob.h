@@ -2,8 +2,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 /**
- * Punk rock styled analog knob component
- * Features distressed metal look with bold industrial markings
+ * Rotary control with a neutral “console” look (flat metal, minimal garnish).
  */
 class AnalogKnob : public juce::Slider
 {
@@ -24,9 +23,9 @@ public:
     
 private:
     Style style;
-    juce::Colour accentColor{0xFFE8A020};  // Punk orange accent
-    juce::Colour metalColor{0xFF4A4A4A};   // Distressed metal
-    juce::Colour darkMetal{0xFF2A2A2A};    // Dark metal shadow
+    juce::Colour accentColor{0xFFD4A74A};
+    juce::Colour metalColor{0xFF505050};
+    juce::Colour darkMetal{0xFF353535};
     juce::String labelText;
     
     void drawKnobFace(juce::Graphics& g, juce::Rectangle<float> bounds);

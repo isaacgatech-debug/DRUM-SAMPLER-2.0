@@ -1,5 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "MicBusLayout.h"
+#include "../Effects/ParametricEQEffect.h"
 #include <string>
 
 DrumTechProcessor::DrumTechProcessor()
@@ -8,17 +10,11 @@ DrumTechProcessor::DrumTechProcessor()
                      .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       apvts(*this, nullptr, "DrumTechState", createParameterLayout())
 {
-    // Initialize 12 mixer channels matching the UI inputs
-    // These map to MIDI notes and drum inputs
-    const int drumNotes[] = {36, 36, 38, 38, 48, 45, 50, 42, 42, 42, 49, 51};  // MIDI notes
-    const char* drumNames[] = {"Kick In", "Kick Out", "Snare Top", "Snare Bottom",
-                               "Tom 1", "Tom 2", "Tom 3", "OVH L", "OVH R",
-                               "Hat", "RM L", "RM R"};
-    
-    for (int i = 0; i < 12; ++i)
+    // One mixer strip per mic stem (not per MIDI note)
+    for (int i = 0; i < MicBus::count; ++i)
     {
         mixerChannels.push_back(
-            std::make_unique<MixerChannel>(drumNotes[i], drumNames[i])
+            std::make_unique<MixerChannel>(0, juce::String(MicBus::rawName(i)))
         );
     }
 
@@ -27,7 +23,8 @@ DrumTechProcessor::DrumTechProcessor()
     
     // Initialize with safe defaults so clicks work before host calls prepareToPlay
     samplerEngine.prepareToPlay(44100.0, 512);
-    triggerEngine.enableRealTimeMode(true);
+    // MIDI-first v1: keep trigger engine compiled, but disable runtime trigger path.
+    triggerEngine.enableRealTimeMode(false);
     grooveLibrary.scanFolders();
     presetManager.scanPresets();
 }
@@ -40,7 +37,17 @@ void DrumTechProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     samplerEngine.prepareToPlay(sampleRate, samplesPerBlock);
     busManager.prepare(sampleRate, samplesPerBlock);
-    
+
+    if (!builtinEqInserted)
+    {
+        for (int i = 0; i < static_cast<int>(mixerChannels.size()); ++i)
+        {
+            mixerChannels[static_cast<size_t>(i)]->loadPlugin(
+                0, std::make_unique<ParametricEQEffect>(*this, i));
+        }
+        builtinEqInserted = true;
+    }
+
     for (auto& channel : mixerChannels)
     {
         channel->prepare(sampleRate, samplesPerBlock);
@@ -91,6 +98,26 @@ void DrumTechProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mid
     }
 
     busManager.clearAllBuses();
+
+    if (auto* p = dynamic_cast<juce::AudioParameterChoice*>(apvts.getParameter("samplerDrummerProfile")))
+    {
+        switch (p->getIndex())
+        {
+            case 1: samplerEngine.setDrummerProfile("drummera"); break;
+            case 2: samplerEngine.setDrummerProfile("drummerb"); break;
+            default: samplerEngine.setDrummerProfile("default"); break;
+        }
+    }
+    if (auto* p = dynamic_cast<juce::AudioParameterChoice*>(apvts.getParameter("samplerPlayingStyle")))
+    {
+        switch (p->getIndex())
+        {
+            case 1: samplerEngine.setPlayingStyle("sticks"); break;
+            case 2: samplerEngine.setPlayingStyle("brushes"); break;
+            default: samplerEngine.setPlayingStyle("auto"); break;
+        }
+    }
+
     samplerEngine.processBlock(buffer, midiMessages);
 
     for (int channelIndex = 0; channelIndex < static_cast<int>(mixerChannels.size()); ++channelIndex)
@@ -100,8 +127,8 @@ void DrumTechProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mid
             continue;
 
         auto& stemBuffer = mixerStemBuffers[static_cast<size_t>(channelIndex)];
-        const auto& sourceStem = samplerEngine.getChannelBuffer(
-            channelIndex % SamplerEngine::NUM_DRUM_CHANNELS);
+        jassert(channelIndex >= 0 && channelIndex < SamplerEngine::NUM_DRUM_CHANNELS);
+        const auto& sourceStem = samplerEngine.getChannelBuffer(channelIndex);
         stemBuffer.makeCopyOf(sourceStem, true);
         mixerChannel->processAudio(stemBuffer);
 
@@ -145,6 +172,7 @@ void DrumTechProcessor::getStateInformation(juce::MemoryBlock& destData)
     state.setProperty(StateManager::kSchemaVersionKey,
                       StateManager::kCurrentSchemaVersion, nullptr);
     state.setProperty("legacySampleFolder", lastLoadedFolder.getFullPathName(), nullptr);
+    samplerEngine.serializeMicTrims(state);
     StateManager::saveState(state, destData);
 }
 
@@ -155,6 +183,7 @@ void DrumTechProcessor::setStateInformation(const void* data, int sizeInBytes)
     {
         loadedState = StateManager::migrateStateIfNeeded(loadedState);
         apvts.replaceState(loadedState);
+        samplerEngine.deserializeMicTrims(loadedState);
 
         const auto folderPath = loadedState.getProperty("legacySampleFolder").toString();
         if (folderPath.isNotEmpty())
@@ -248,6 +277,7 @@ bool DrumTechProcessor::saveCurrentPreset(const juce::String& name, const juce::
     auto state = apvts.copyState();
     state.setProperty(StateManager::kSchemaVersionKey, StateManager::kCurrentSchemaVersion, nullptr);
     state.setProperty("legacySampleFolder", lastLoadedFolder.getFullPathName(), nullptr);
+    samplerEngine.serializeMicTrims(state);
     return presetManager.savePreset(name, category, state);
 }
 
@@ -262,6 +292,7 @@ bool DrumTechProcessor::loadPresetByName(const juce::String& name)
 
     presetState = StateManager::migrateStateIfNeeded(presetState);
     apvts.replaceState(presetState);
+    samplerEngine.deserializeMicTrims(presetState);
 
     const auto folderPath = presetState.getProperty("legacySampleFolder").toString();
     if (folderPath.isNotEmpty())
@@ -329,6 +360,16 @@ juce::AudioProcessorValueTreeState::ParameterLayout DrumTechProcessor::createPar
         "groovePlaybackEnabled", "Groove Playback Enabled", false));
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
         "triggerGlobalThreshold", "Trigger Global Threshold", 0.0f, 1.0f, 0.3f));
+    parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
+        juce::ParameterID("samplerDrummerProfile", 1),
+        "Sampler Drummer Profile",
+        juce::StringArray({"Default", "DrummerA", "DrummerB"}),
+        0));
+    parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
+        juce::ParameterID("samplerPlayingStyle", 1),
+        "Sampler Playing Style",
+        juce::StringArray({"Auto", "Sticks", "Brushes"}),
+        0));
 
     for (int channel = 0; channel < 8; ++channel)
     {
@@ -338,7 +379,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout DrumTechProcessor::createPar
             0.0f, 1.0f, 0.3f));
     }
 
-    for (int channel = 0; channel < 12; ++channel)
+    for (int channel = 0; channel < MicBus::count; ++channel)
     {
         const auto base = "mixCh" + std::to_string(channel);
         parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
@@ -361,6 +402,37 @@ juce::AudioProcessorValueTreeState::ParameterLayout DrumTechProcessor::createPar
                 juce::ParameterID(base + "Send" + std::to_string(send), 1),
                 "Mixer Ch " + juce::String(channel + 1) + " Send " + juce::String(send + 1),
                 0.0f, 1.0f, 0.0f));
+        }
+    }
+
+    static const float eqDefaultFreqs[8] = { 80.f, 200.f, 500.f, 1000.f, 2500.f, 5000.f, 10000.f, 14000.f };
+    static const int eqDefaultTypes[8]   = { 1, 0, 0, 0, 0, 0, 0, 2 };
+    juce::StringArray eqTypeNames({ "Bell", "Low Shelf", "High Shelf", "Low Pass", "High Pass" });
+
+    for (int ch = 0; ch < MicBus::count; ++ch)
+    {
+        for (int b = 0; b < 8; ++b)
+        {
+            const juce::String pb = "eqCh" + juce::String(ch) + "Band" + juce::String(b);
+            juce::NormalisableRange<float> freqRange(20.0f, 20000.0f, 1.0f);
+            freqRange.setSkewForCentre(1000.0f);
+
+            parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+                juce::ParameterID(pb + "Freq", 2), pb + " Freq", freqRange, eqDefaultFreqs[b]));
+
+            parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+                juce::ParameterID(pb + "Gain", 2), pb + " Gain",
+                juce::NormalisableRange<float>(-24.0f, 24.0f, 0.1f), 0.0f));
+
+            parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+                juce::ParameterID(pb + "Q", 2), pb + " Q",
+                juce::NormalisableRange<float>(0.1f, 24.0f, 0.01f, 0.35f), 1.0f));
+
+            parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
+                juce::ParameterID(pb + "Type", 2), pb + " Type", eqTypeNames, eqDefaultTypes[b]));
+
+            parameters.push_back(std::make_unique<juce::AudioParameterBool>(
+                juce::ParameterID(pb + "Bypass", 2), pb + " Bypass", false));
         }
     }
 

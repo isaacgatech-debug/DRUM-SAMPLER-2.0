@@ -9,7 +9,7 @@
 class DrumTechProcessor;
 
 /**
- * Pro Tools inspired channel strip (100px wide).
+ * Pro Tools inspired channel strip (120px wide).
  * Sections (top → bottom):
  *   3px color bar | 24px header | INSERTS (4 slots) |
  *   SENDS (4 slots) | I/O rows | GROUPS | PAN knob |
@@ -37,7 +37,7 @@ public:
     std::function<void(int, const juce::String&, float)> onParameterChanged;
     std::function<void(int, const juce::String&, bool)>  onButtonChanged;
 
-    static constexpr int stripWidth = 100;
+    static constexpr int stripWidth = 120;
 
     enum class MeterType { Peak, VU, RMS, K14, K20 };
 
@@ -70,7 +70,7 @@ private:
     MeterType meterType = MeterType::Peak;
 
     // Pan knob
-    AnalogKnob panKnob{AnalogKnob::Style::Small};
+    AnalogKnob panKnob{AnalogKnob::Style::Standard};
 
     // Solo / Mute
     juce::TextButton soloBtn{"S"};

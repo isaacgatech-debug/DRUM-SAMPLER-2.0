@@ -4,8 +4,8 @@
 #include "AnalogKnob.h"
 
 /**
- * Bottom transport strip — always visible, 44px tall.
- * [loop][stop][play][record][tap]  4/4  120bpm  001:01:000  [master vol]
+ * Bottom transport strip — height set by DrumTechEditor (transportBarH).
+ * Text labels avoid Unicode font issues: LOOP STOP PLAY REC TAP.
  */
 class TransportBar : public juce::Component
 {
@@ -44,17 +44,17 @@ public:
     std::function<void(float)> onMasterVolume;
 
 private:
-    juce::TextButton loopButton  {"⟳"};
-    juce::TextButton stopButton  {"■"};
-    juce::TextButton playButton  {"▶"};
-    juce::TextButton recordButton{"●"};
+    juce::TextButton loopButton  {"LOOP"};
+    juce::TextButton stopButton  {"STOP"};
+    juce::TextButton playButton  {"PLAY"};
+    juce::TextButton recordButton{"REC"};
     juce::TextButton tapButton   {"TAP"};
 
     juce::Label timeSigLabel;
     juce::Label bpmLabel;
     juce::Label positionLabel;
 
-    AnalogKnob masterVolKnob{AnalogKnob::Style::Small};
+    AnalogKnob masterVolKnob{AnalogKnob::Style::Standard};
 
     bool isPlaying  = false;
     bool isLooping  = false;

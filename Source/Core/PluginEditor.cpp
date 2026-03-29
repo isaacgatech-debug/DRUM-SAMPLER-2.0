@@ -4,9 +4,11 @@
 DrumTechEditor::DrumTechEditor(DrumTechProcessor& p)
     : AudioProcessorEditor(&p), processor(p)
 {
-    setSize(1400, 900);
+    setLookAndFeel(&appLookAndFeel);
+
+    setSize(1480, 860);
     setResizable(true, true);
-    setResizeLimits(1200, 800, 4000, 2000);
+    setResizeLimits(1180, 740, 2800, 1700);
 
     // Load logo from binary data (preferred) or filesystem
 #if defined(BinaryData_Gridlock_Logo___White_png)
@@ -54,10 +56,9 @@ DrumTechEditor::DrumTechEditor(DrumTechProcessor& p)
     };
 
     auto switchFn = [this](int t) { switchTab(t); };
-    styleTab(tabKit,     0, switchFn); addAndMakeVisible(tabKit);
-    styleTab(tabMixer,   1, switchFn); addAndMakeVisible(tabMixer);
-    styleTab(tabTrigger, 2, switchFn); addAndMakeVisible(tabTrigger);
-    styleTab(tabGrooves, 3, switchFn); addAndMakeVisible(tabGrooves);
+    styleTab(tabKit,      0, switchFn); addAndMakeVisible(tabKit);
+    styleTab(tabMixer,    1, switchFn); addAndMakeVisible(tabMixer);
+    styleTab(tabSettings, 2, switchFn); addAndMakeVisible(tabSettings);
 
     // Kit selector (shows popup menu instead of combo)
     kitSelectorBtn.setColour(juce::TextButton::buttonColourId,  juce::Colour(PluginColors::pluginSurface));
@@ -65,10 +66,32 @@ DrumTechEditor::DrumTechEditor(DrumTechProcessor& p)
     kitSelectorBtn.onClick = [this] { showKitPopupMenu(); };
     addAndMakeVisible(kitSelectorBtn);
 
+    kitLockBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(PluginColors::pluginSurface));
+    kitLockBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(PluginColors::textMuted));
+    kitLockBtn.onClick = [this]
+    {
+        kitLocked = !kitLocked;
+        kitLockBtn.setButtonText(kitLocked ? "LOCK: ON" : "LOCK: OFF");
+        kitLockBtn.setColour(juce::TextButton::textColourOffId,
+                             kitLocked ? juce::Colour(PluginColors::accent)
+                                       : juce::Colour(PluginColors::textMuted));
+        settingsView.setImportStatus(kitLocked ? "kit locked" : "kit unlocked");
+    };
+    addAndMakeVisible(kitLockBtn);
+
     // Content views
     kitView.setProcessor(&processor);
+    kitView.setKitBuilderMode(false);
+    kitView.onMixerPressed = [this]
+    {
+        mixerSlideTarget = (mixerSlideTarget > 0.5f) ? 0.0f : 1.0f;
+    };
+    kitView.onHomePressed = [this]
+    {
+        mixerSlideTarget = 0.0f;
+    };
     mixerView.setProcessor(&processor);
-    triggerUI.setAudioTriggerEngine(&processor.getTriggerEngine());
+    mixerView.setAlpha(0.86f);
     grooveBrowser.setGrooveLibrary(&processor.getGrooveLibrary());
     grooveBrowser.setMIDIPlayer(&processor.getMIDIPlayer());
     grooveBrowser.onAddToTimeline = [this](const GrooveMetadata& groove)
@@ -83,14 +106,49 @@ DrumTechEditor::DrumTechEditor(DrumTechProcessor& p)
         grooveTimeline.addBlock(block);
     };
     addAndMakeVisible(kitView);
-    addAndMakeVisible(grooveBrowser);
+    addAndMakeVisible(mixerDismissLayer);
     addAndMakeVisible(mixerView);
-    addAndMakeVisible(triggerUI);
+    addAndMakeVisible(settingsView);
+
+    mixerDismissLayer.onDismiss = [this]
+    {
+        mixerSlideTarget = 0.0f;
+    };
+
+    settingsView.onImportFolder = [this] { showKitPopupMenu(); };
+    settingsView.onCreateKit = [this] { showKitPopupMenu(); };
+    settingsView.onDrummerProfileChanged = [this](int idx)
+    {
+        if (auto* p = dynamic_cast<juce::AudioParameterChoice*>(
+                processor.getAPVTS().getParameter("samplerDrummerProfile")))
+        {
+            const int n = juce::jmax(1, p->choices.size() - 1);
+            p->setValueNotifyingHost(static_cast<float>(juce::jlimit(0, n, idx)) / static_cast<float>(n));
+        }
+    };
+    settingsView.onPlayingStyleChanged = [this](int idx)
+    {
+        if (auto* p = dynamic_cast<juce::AudioParameterChoice*>(
+                processor.getAPVTS().getParameter("samplerPlayingStyle")))
+        {
+            const int n = juce::jmax(1, p->choices.size() - 1);
+            p->setValueNotifyingHost(static_cast<float>(juce::jlimit(0, n, idx)) / static_cast<float>(n));
+        }
+    };
 
     // MIDI roll + transport (always visible)
     addAndMakeVisible(grooveTimeline);
     addAndMakeVisible(transportBar);
-    transportBar.onPlay = [this](bool shouldPlay) { processor.setTransportPlaying(shouldPlay); };
+    transportBar.onPlay = [this](bool shouldPlay)
+    {
+        if (shouldPlay)
+        {
+            auto seq = grooveTimeline.buildSequenceForGrid();
+            if (seq.getNumEvents() > 0)
+                processor.getMIDIPlayer().loadSequence(seq, processor.getMIDIPlayer().getTempo());
+        }
+        processor.setTransportPlaying(shouldPlay);
+    };
     transportBar.onStop = [this] { processor.setTransportPlaying(false); };
     transportBar.onLoop = [this](bool shouldLoop) { processor.setTransportLooping(shouldLoop); };
     transportBar.onRecord = [this](bool shouldRecord) { processor.setTransportRecording(shouldRecord); };
@@ -115,6 +173,7 @@ DrumTechEditor::DrumTechEditor(DrumTechProcessor& p)
 
 DrumTechEditor::~DrumTechEditor()
 {
+    setLookAndFeel(nullptr);
     ThemeManager::get().onThemeChanged = nullptr;
     ErrorLogger::getInstance().removeListener(this);
     removeKeyListener(this);
@@ -130,13 +189,13 @@ void DrumTechEditor::applyTheme()
     auto mutedCol  = tm.muted();
 
     // Update tab colours
-    juce::TextButton* tabs[] = { &tabKit, &tabMixer, &tabTrigger, &tabGrooves };
-    for (int i = 0; i < 4; ++i)
+    juce::TextButton* tabs[] = { &tabKit, &tabMixer, &tabSettings };
+    for (int i = 0; i < 3; ++i)
     {
         bool active = (i == activeTab);
         tabs[i]->setColour(juce::TextButton::buttonColourId,  panelCol);
         tabs[i]->setColour(juce::TextButton::textColourOffId,
-                           active ? juce::Colour(PluginColors::accent) : mutedCol);
+            active ? juce::Colour(PluginColors::accent) : mutedCol);
     }
 
     kitSelectorBtn.setColour(juce::TextButton::buttonColourId,  tm.surfaceHi());
@@ -144,11 +203,19 @@ void DrumTechEditor::applyTheme()
     themeModeBtn.setColour  (juce::TextButton::buttonColourId,  tm.surfaceHi());
     themeModeBtn.setColour  (juce::TextButton::textColourOffId, tm.accent());
 
+    settingsView.setCurrentKitName(currentKitName);
+
     juce::ignoreUnused(bgCol, mutedCol, textCol2);
 }
 
 void DrumTechEditor::showKitPopupMenu()
 {
+    if (kitLocked)
+    {
+        settingsView.setImportStatus("blocked: unlock kit to import/switch");
+        return;
+    }
+
     juce::PopupMenu menu;
     menu.addSectionHeader("Select Kit");
     menu.addItem(1, "Default Kit", true, currentKitName == "Default Kit");
@@ -161,9 +228,9 @@ void DrumTechEditor::showKitPopupMenu()
     menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&kitSelectorBtn),
         [this](int result)
         {
-            if (result == 1)  { currentKitName = "Default Kit"; kitSelectorBtn.setButtonText("Kit: Default"); }
-            else if (result == 2) { currentKitName = "Rock Kit";    kitSelectorBtn.setButtonText("Kit: Rock"); }
-            else if (result == 3) { currentKitName = "Jazz Kit";    kitSelectorBtn.setButtonText("Kit: Jazz"); }
+            if (result == 1)  { currentKitName = "Default Kit"; kitSelectorBtn.setButtonText("Kit: Default"); settingsView.setCurrentKitName(currentKitName); }
+            else if (result == 2) { currentKitName = "Rock Kit";    kitSelectorBtn.setButtonText("Kit: Rock"); settingsView.setCurrentKitName(currentKitName); }
+            else if (result == 3) { currentKitName = "Jazz Kit";    kitSelectorBtn.setButtonText("Kit: Jazz"); settingsView.setCurrentKitName(currentKitName); }
             else if (result == 10 || result == 11)
             {
                 // Folder import
@@ -180,7 +247,13 @@ void DrumTechEditor::showKitPopupMenu()
                             processor.loadSamplesFromFolder(folder);
                             currentKitName = folder.getFileName();
                             kitSelectorBtn.setButtonText("Kit: " + folder.getFileName());
+                            settingsView.setCurrentKitName(currentKitName);
+                            settingsView.setImportStatus("loaded " + folder.getFileName());
                             LOG_INFO("Loaded kit from folder: " + folder.getFullPathName());
+                        }
+                        else
+                        {
+                            settingsView.setImportStatus("cancelled");
                         }
                     });
             }
@@ -190,98 +263,61 @@ void DrumTechEditor::showKitPopupMenu()
 //==============================================================================
 void DrumTechEditor::paint(juce::Graphics& g)
 {
+    g.fillAll(juce::Colours::black);
+    if (mixerSlideAmount > 0.001f)
+    {
+        g.setColour(juce::Colours::black.withAlpha(0.35f * mixerSlideAmount));
+        g.fillRect(getLocalBounds());
+    }
+}
+
+juce::String DrumTechEditor::activeTabContextTitle() const
+{
+    switch (activeTab)
+    {
+        case 0:  return "Home";
+        case 1:  return "Mix";
+        case 2:  return "Settings";
+        default: return {};
+    }
+}
+
+void DrumTechEditor::paintInstrumentBar(juce::Graphics& g, juce::Rectangle<int> instrBar)
+{
     auto& tm = ThemeManager::get();
-
-    g.fillAll(tm.bg());
-
-    // Top navigation bar
-    juce::Rectangle<int> topNav(0, 0, getWidth(), topNavH);
-    g.setColour(tm.panel());
-    g.fillRect(topNav);
-
-    // Bottom border on top nav
-    g.setColour(tm.border());
-    g.drawHorizontalLine(topNavH - 1, 0.0f, (float)getWidth());
-
-    // Logo (22x22)
-    if (logoImage.isValid())
-    {
-        g.drawImage(logoImage,
-                    juce::Rectangle<float>(10.0f, (topNavH - 22.0f) * 0.5f, 22.0f, 22.0f),
-                    juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize);
-    }
-    else
-    {
-        // Placeholder 'G' badge
-        g.setColour(juce::Colour(PluginColors::accent));
-        g.fillEllipse(10, (topNavH - 22) / 2, 22, 22);
-        g.setFont(juce::FontOptions(12.0f, juce::Font::bold));
-        g.setColour(juce::Colours::black);
-        g.drawText("G", 10, (topNavH - 22) / 2, 22, 22, juce::Justification::centred, false);
-    }
-
-    // ── Branding ──────────────────────────────────────────────────────────
-    float tx = 40.0f;
-    float ty = (topNavH - 20.0f) * 0.5f;
-
-    // "GRIDLOCK" — white bold
-    g.setFont(juce::FontOptions(16.0f, juce::Font::bold));
-    g.setColour(tm.text());
-    g.drawText("GRIDLOCK", (int)tx, (int)ty, 90, 20, juce::Justification::centredLeft, false);
-
-    // Separator
-    g.setFont(PluginFonts::mono(14.0f));
-    g.setColour(tm.border());
-    g.drawText("|", (int)(tx + 93), (int)ty, 14, 20, juce::Justification::centred, false);
-
-    // "DRUM TECH" — stylized: italic bold, cyan, letterSpacing via char-by-char
-    {
-        const juce::String title = "DRUM TECH";
-        juce::Font titleFont(juce::FontOptions(15.0f, juce::Font::bold | juce::Font::italic));
-        g.setFont(titleFont);
-
-        float charX = tx + 110.0f;
-        float spacing = 1.5f;  // extra inter-character gap
-        juce::Colour c1(PluginColors::accent);
-        juce::Colour c2(0xFF80E8FF);
-
-        for (int i = 0; i < title.length(); ++i)
-        {
-            float t = (float)i / (float)(title.length() - 1);
-            g.setColour(c1.interpolatedWith(c2, t));
-            juce::String ch(title.substring(i, i + 1));
-            float cw = titleFont.getStringWidthFloat(ch);
-            g.drawText(ch, (int)charX, (int)ty, (int)(cw + spacing + 2), 20,
-                       juce::Justification::centredLeft, false);
-            charX += cw + spacing;
-        }
-    }
-
-    // Instrument bar
-    juce::Rectangle<int> instrBar(0, topNavH, getWidth(), instrBarH);
-    g.setColour(tm.panel().darker(0.06f));
+    g.setColour(tm.panel().darker(0.08f));
     g.fillRect(instrBar);
-    g.setColour(tm.border());
-    g.drawHorizontalLine(topNavH + instrBarH - 1, 0.0f, (float)getWidth());
 
-    // Tab underlines (painted over buttons)
-    paintTabBar(g, {0, 0, getWidth(), topNavH});
+    // Subtle top highlight (raised edge)
+    g.setColour(tm.borderHi().withAlpha(0.35f));
+    g.drawHorizontalLine(instrBar.getY(), 0.0f, (float)getWidth());
+
+    g.setColour(tm.border());
+    g.drawHorizontalLine(instrBar.getBottom() - 1, 0.0f, (float)getWidth());
+
+    g.setFont(juce::FontOptions(11.5f, juce::Font::plain));
+    g.setColour(tm.muted());
+    const juce::String ctx = "Current view: " + activeTabContextTitle();
+    g.drawText(ctx, instrBar.reduced(16, 0), juce::Justification::centred, true);
 }
 
 void DrumTechEditor::paintTabBar(juce::Graphics& g, juce::Rectangle<int>)
 {
-    juce::TextButton* tabs[] = { &tabKit, &tabMixer, &tabTrigger, &tabGrooves };
-    for (int i = 0; i < 4; ++i)
+    auto& tm = ThemeManager::get();
+    juce::TextButton* tabs[] = { &tabKit, &tabMixer, &tabSettings };
+    for (int i = 0; i < 3; ++i)
     {
+        auto tb = tabs[i]->getBounds();
+        if (i > 0)
+        {
+            g.setColour(tm.border().withAlpha(0.85f));
+            g.drawVerticalLine(tb.getX(), (float)tb.getY() + 6.0f, (float)tb.getBottom() - 6.0f);
+        }
+
         if (i == activeTab)
         {
-            auto tb = tabs[i]->getBounds();
-            // Cyan underline (3px)
             g.setColour(juce::Colour(PluginColors::accent));
-            g.fillRect(tb.getX(), tb.getBottom() - 3, tb.getWidth(), 3);
-            // Subtle tint
-            g.setColour(juce::Colour(PluginColors::accent).withAlpha(0.07f));
-            g.fillRect(tb);
+            g.fillRect(tb.getX(), tb.getBottom() - 2, tb.getWidth(), 2);
         }
     }
 }
@@ -289,41 +325,38 @@ void DrumTechEditor::paintTabBar(juce::Graphics& g, juce::Rectangle<int>)
 //==============================================================================
 void DrumTechEditor::resized()
 {
+    // Immersive single-screen mode driven by backdrop hotspots.
     auto area = getLocalBounds();
-    auto topNavArea = area.removeFromTop(topNavH);
 
-    // Tab buttons
-    int tabX = 240, tabW = 90;
-    tabKit    .setBounds(tabX,            0, tabW, topNavH);
-    tabMixer  .setBounds(tabX + tabW,     0, tabW, topNavH);
-    tabTrigger.setBounds(tabX + tabW * 2, 0, tabW, topNavH);
-    tabGrooves.setBounds(tabX + tabW * 3, 0, tabW, topNavH);
+    tabKit.setVisible(false);
+    tabMixer.setVisible(false);
+    tabSettings.setVisible(false);
+    kitSelectorBtn.setVisible(false);
+    kitLockBtn.setVisible(false);
+    themeModeBtn.setVisible(false);
+    grooveTimeline.setVisible(false);
+    transportBar.setVisible(false);
+    settingsView.setVisible(false);
+    grooveBrowser.setVisible(false);
 
-    // Right-side controls in top nav
-    int rightX = getWidth() - 4;
-    themeModeBtn.setBounds(rightX - 60,  (topNavH - 24) / 2, 58, 24);
-    rightX -= 64;
-    kitSelectorBtn.setBounds(rightX - 130, (topNavH - 24) / 2, 128, 24);
+    kitView.setVisible(!debugConsoleVisible);
+    kitView.setBounds(area);
 
-    // Instrument bar
-    area.removeFromTop(instrBarH);
+    const int mixerW = juce::jlimit(640, area.getWidth() - 120, static_cast<int>(area.getWidth() * 0.72f));
+    const int mixerX = area.getRight() - static_cast<int>(mixerSlideAmount * static_cast<float>(mixerW));
+    mixerView.setBounds(mixerX, area.getY(), mixerW, area.getHeight());
+    mixerView.setVisible((mixerSlideAmount > 0.001f) && !debugConsoleVisible);
+    if (mixerView.isVisible())
+        mixerView.toFront(false);
 
-    // Bottom: transport + MIDI roll
-    auto transportArea = area.removeFromBottom(transportBarH);
-    auto rollArea      = area.removeFromBottom(midiRollH);
-    transportBar  .setBounds(transportArea);
-    grooveTimeline.setBounds(rollArea);
-
-    // Content area
-    kitView      .setBounds(area);
-    grooveBrowser.setBounds(area);
-    mixerView    .setBounds(area);
-    triggerUI    .setBounds(area);
-
-    kitView      .setVisible(activeTab == 0 && !debugConsoleVisible);
-    grooveBrowser.setVisible(activeTab == 3 && !debugConsoleVisible);
-    mixerView    .setVisible(activeTab == 1 && !debugConsoleVisible);
-    triggerUI    .setVisible(activeTab == 2 && !debugConsoleVisible);
+    mixerDismissLayer.setVisible((mixerSlideAmount > 0.001f) && !debugConsoleVisible);
+    if (mixerDismissLayer.isVisible())
+    {
+        mixerDismissLayer.setBounds(area.getX(), area.getY(),
+                                    juce::jmax(0, mixerX - area.getX()), area.getHeight());
+        mixerDismissLayer.toFront(false);
+        mixerView.toFront(false);
+    }
 
     if (debugConsole)
     {
@@ -332,7 +365,6 @@ void DrumTechEditor::resized()
     }
 
     repaint();
-    juce::ignoreUnused(topNavArea);
 }
 
 //==============================================================================

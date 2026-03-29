@@ -1,5 +1,6 @@
 #include "MixerView.h"
 #include "../Core/PluginProcessor.h"
+#include "../Core/MicBusLayout.h"
 #include "../Mixer/MixerChannel.h"
 #include <string>
 
@@ -7,7 +8,7 @@ MixerView::MixerView()
 {
     stripsViewport.setViewedComponent(&stripsContainer, false);
     stripsViewport.setScrollBarsShown(false, true);  // vertical off, horizontal on
-    stripsViewport.setScrollBarThickness(8);
+    stripsViewport.setScrollBarThickness(12);
     addAndMakeVisible(stripsViewport);
 
     // Master fader
@@ -15,13 +16,14 @@ MixerView::MixerView()
     masterFader.setRange(0.0, 1.0, 0.001);
     masterFader.setValue(0.8);
     masterFader.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    masterFader.getProperties().set("drumtechConsoleFader", true);
     masterFader.setColour(juce::Slider::thumbColourId,      juce::Colour(PluginColors::textPrimary));
     masterFader.setColour(juce::Slider::trackColourId,      juce::Colour(PluginColors::accentDim));
     masterFader.setColour(juce::Slider::backgroundColourId, juce::Colour(PluginColors::pluginBg));
     addAndMakeVisible(masterFader);
 
     masterDbLabel.setText("-2.0", juce::dontSendNotification);
-    masterDbLabel.setFont(PluginFonts::mono(10.0f));
+    masterDbLabel.setFont(PluginFonts::mono(12.5f));
     masterDbLabel.setColour(juce::Label::textColourId, juce::Colour(PluginColors::accent));
     masterDbLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(masterDbLabel);
@@ -44,7 +46,7 @@ void MixerView::createChannelStrips()
 
     for (int i = 0; i < numChannels; ++i)
     {
-        channelStrips[i] = std::make_unique<ChannelStrip>(i, channelNames[i]);
+        channelStrips[i] = std::make_unique<ChannelStrip>(i, MicBus::getName(i));
 
         channelStrips[i]->onButtonChanged = [this](int ch, const juce::String& btn, bool state)
         {
@@ -94,7 +96,7 @@ void MixerView::setProcessor(DrumTechProcessor* proc)
 
 void MixerView::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colour(PluginColors::pluginBg));
+    g.fillAll(juce::Colour(PluginColors::pluginBg).withAlpha(0.82f));
 
     // Sidebar
     auto sidebarBounds = getLocalBounds().toFloat().removeFromLeft(static_cast<float>(sidebarW));
@@ -108,7 +110,7 @@ void MixerView::paint(juce::Graphics& g)
 
 void MixerView::drawSidebar(juce::Graphics& g, juce::Rectangle<float> bounds)
 {
-    g.setColour(juce::Colour(PluginColors::pluginPanel));
+    g.setColour(juce::Colour(PluginColors::pluginPanel).withAlpha(0.85f));
     g.fillRect(bounds);
 
     g.setColour(juce::Colour(PluginColors::pluginBorder));
@@ -116,17 +118,17 @@ void MixerView::drawSidebar(juce::Graphics& g, juce::Rectangle<float> bounds)
 
     // Labels aligned to sections in channel strip layout
     const char* labels[] = { "INPUT", "EQ", "SENDS", "S/M", "VU", "FADER", "PAN" };
-    // Approx y positions matching channel strip layout (after 3+36+30=69px header area)
-    const int labelYs[] = { 5, 75, 120, 165, 200, 310, 400 };
+    // Approx y positions matching channel strip layout (scaled with strip section heights)
+    const int labelYs[] = { 6, 90, 144, 198, 240, 372, 480 };
 
-    g.setFont(PluginFonts::mono(8.0f));
+    g.setFont(PluginFonts::mono(10.0f));
     g.setColour(juce::Colour(PluginColors::textDim));
 
     for (int i = 0; i < 7; ++i)
     {
         g.drawText(labels[i],
                    static_cast<int>(bounds.getX()), labelYs[i],
-                   static_cast<int>(bounds.getWidth()), 12,
+                   static_cast<int>(bounds.getWidth()), 16,
                    juce::Justification::centred, false);
         // Separator line
         g.setColour(juce::Colour(PluginColors::pluginBorder).withAlpha(0.4f));
@@ -137,7 +139,7 @@ void MixerView::drawSidebar(juce::Graphics& g, juce::Rectangle<float> bounds)
 
 void MixerView::drawMasterSection(juce::Graphics& g, juce::Rectangle<float> bounds)
 {
-    g.setColour(juce::Colour(PluginColors::pluginPanel));
+    g.setColour(juce::Colour(PluginColors::pluginPanel).withAlpha(0.88f));
     g.fillRect(bounds);
 
     // Cyan top bar (3px)
@@ -148,7 +150,7 @@ void MixerView::drawMasterSection(juce::Graphics& g, juce::Rectangle<float> boun
     auto header = bounds.removeFromTop(36.0f);
     g.setColour(juce::Colour(PluginColors::pluginSurface));
     g.fillRect(header);
-    g.setFont(PluginFonts::label(11.0f));
+    g.setFont(PluginFonts::label(13.0f));
     g.setColour(PluginColors::masterColor);
     g.drawText("MASTER", header, juce::Justification::centred, false);
 }
@@ -184,9 +186,9 @@ void MixerView::resized()
     int mW = masterArea.getWidth();
 
     // VU left, fader right
-    masterVU.setBounds(mX + 4, mY + 45, 20, mH - 100);
-    masterFader.setBounds(mX + 30, mY + 45, mW - 34, mH - 100);
-    masterDbLabel.setBounds(mX, mY + mH - 48, mW, 14);
+    masterVU.setBounds(mX + 6, mY + 54, 26, mH - 124);
+    masterFader.setBounds(mX + 38, mY + 54, mW - 44, mH - 124);
+    masterDbLabel.setBounds(mX, mY + mH - 58, mW, 20);
 }
 
 void MixerView::timerCallback()

@@ -84,7 +84,7 @@ TriggerUI::TriggerChannel::TriggerChannel(const juce::String& micName)
     expandBtn.onClick = [this]
     {
         freqEditorVisible = !freqEditorVisible;
-        expandBtn.setButtonText(freqEditorVisible ? "∧ EQ" : "∨ EQ");
+        expandBtn.setButtonText(freqEditorVisible ? "^ EQ" : "v EQ");
         freqEditor.setVisible(freqEditorVisible);
         // Notify parent to re-layout
         if (auto* p = getParentComponent()) p->resized();
@@ -93,7 +93,7 @@ TriggerUI::TriggerChannel::TriggerChannel(const juce::String& micName)
 
     // Filename label
     filenameLabel.setText("Drop or Import audio", juce::dontSendNotification);
-    filenameLabel.setFont(PluginFonts::mono(9.0f));
+    filenameLabel.setFont(PluginFonts::mono(11.0f));
     filenameLabel.setColour(juce::Label::textColourId, juce::Colour(PluginColors::textMuted));
     filenameLabel.setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(filenameLabel);
@@ -102,7 +102,7 @@ TriggerUI::TriggerChannel::TriggerChannel(const juce::String& micName)
     thresholdSlider.setRange(0.0, 1.0, 0.01);
     thresholdSlider.setValue(0.3);
     thresholdSlider.setSliderStyle(juce::Slider::LinearHorizontal);
-    thresholdSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 42, 16);
+    thresholdSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 50, 22);
     thresholdSlider.setColour(juce::Slider::thumbColourId,             chColor);
     thresholdSlider.setColour(juce::Slider::trackColourId,             chColor.withAlpha(0.4f));
     thresholdSlider.setColour(juce::Slider::backgroundColourId,        juce::Colour(PluginColors::pluginBg));
@@ -117,7 +117,7 @@ TriggerUI::TriggerChannel::TriggerChannel(const juce::String& micName)
     addAndMakeVisible(thresholdSlider);
 
     thresholdLabel.setText("Threshold", juce::dontSendNotification);
-    thresholdLabel.setFont(PluginFonts::label(8.5f));
+    thresholdLabel.setFont(PluginFonts::label(11.0f));
     thresholdLabel.setColour(juce::Label::textColourId, juce::Colour(PluginColors::textMuted));
     addAndMakeVisible(thresholdLabel);
 
@@ -150,7 +150,7 @@ void TriggerUI::TriggerChannel::paint(juce::Graphics& g)
     drawLeftPanel(g, leftArea);
 
     // Waveform area (fills remaining, minus threshold row at bottom)
-    auto wfRow = bounds.removeFromTop(rowH - 28);
+    auto wfRow = bounds.removeFromTop(rowH - 34);
     drawWaveform(g, wfRow);
 }
 
@@ -164,9 +164,9 @@ void TriggerUI::TriggerChannel::drawLeftPanel(juce::Graphics& g, juce::Rectangle
     g.drawVerticalLine(area.getRight() - 1, (float)area.getY(), (float)area.getBottom());
 
     // Channel name
-    g.setFont(PluginFonts::label(10.0f));
+    g.setFont(PluginFonts::label(12.0f));
     g.setColour(chColor);
-    g.drawText(channelName, area.reduced(6, 4).removeFromTop(18),
+    g.drawText(channelName, area.reduced(8, 6).removeFromTop(22),
                juce::Justification::centredLeft, false);
 }
 
@@ -182,7 +182,7 @@ void TriggerUI::TriggerChannel::drawWaveform(juce::Graphics& g, juce::Rectangle<
         g.fillRect(area);
         g.setColour(juce::Colour(PluginColors::accent));
         g.drawRect(area, 1);
-        g.setFont(PluginFonts::label(10.0f));
+        g.setFont(PluginFonts::label(12.0f));
         g.setColour(juce::Colour(PluginColors::accent));
         g.drawText("Drop audio here", area, juce::Justification::centred, false);
         return;
@@ -190,7 +190,7 @@ void TriggerUI::TriggerChannel::drawWaveform(juce::Graphics& g, juce::Rectangle<
 
     if (audioBuffer.getNumSamples() == 0)
     {
-        g.setFont(PluginFonts::label(9.0f));
+        g.setFont(PluginFonts::label(11.0f));
         g.setColour(juce::Colour(PluginColors::textMuted).withAlpha(0.5f));
         g.drawText("Import or drag an audio file to see waveform", area,
                    juce::Justification::centred, false);
@@ -275,26 +275,26 @@ void TriggerUI::TriggerChannel::resized()
     auto left = area.removeFromLeft(leftW);
 
     // Left panel buttons
-    left.removeFromTop(22);   // channel name text area
-    importBtn.setBounds(left.removeFromTop(22).reduced(4, 2));
-    clearBtn .setBounds(left.removeFromTop(22).reduced(4, 2));
-    playBtn  .setBounds(left.removeFromTop(22).reduced(4, 2));
-    expandBtn.setBounds(left.removeFromTop(22).reduced(4, 2));
-    filenameLabel.setBounds(left.reduced(4, 2));
+    left.removeFromTop(26);   // channel name text area
+    importBtn.setBounds(left.removeFromTop(28).reduced(5, 3));
+    clearBtn .setBounds(left.removeFromTop(28).reduced(5, 3));
+    playBtn  .setBounds(left.removeFromTop(28).reduced(5, 3));
+    expandBtn.setBounds(left.removeFromTop(28).reduced(5, 3));
+    filenameLabel.setBounds(left.reduced(6, 4));
 
     // Right side: waveform area (top portion), threshold row, then optional freq editor
-    int thrH = 26;
+    int thrH = 32;
     auto thrRow = area.removeFromBottom(thrH);
-    thresholdLabel.setBounds(thrRow.removeFromLeft(70));
+    thresholdLabel.setBounds(thrRow.removeFromLeft(88));
     thresholdSlider.setBounds(thrRow);
 
     // Waveform area (fills)
-    area.removeFromTop(2);
+    area.removeFromTop(4);
     // waveform is drawn in paint() — no child component needed
 
     // Freq editor
     if (freqEditorVisible)
-        freqEditor.setBounds(area.removeFromBottom(freqEditorVisible ? 130 : 0));
+        freqEditor.setBounds(area.removeFromBottom(freqEditorVisible ? 150 : 0));
     else
         freqEditor.setBounds(juce::Rectangle<int>());
 }
@@ -366,17 +366,17 @@ void TriggerUI::paint(juce::Graphics& g)
 
     // Header bar
     g.setColour(juce::Colour(PluginColors::pluginPanel));
-    g.fillRect(0, 0, getWidth(), 28);
-    g.setFont(PluginFonts::label(10.0f));
+    g.fillRect(0, 0, getWidth(), 36);
+    g.setFont(PluginFonts::label(12.5f));
     g.setColour(juce::Colour(PluginColors::textMuted));
     g.drawText("TRIGGER CHANNELS — Import audio per mic, drag waveforms to adjust",
-               10, 0, getWidth() - 20, 28, juce::Justification::centredLeft, false);
+               14, 0, getWidth() - 28, 36, juce::Justification::centredLeft, false);
 }
 
 void TriggerUI::resized()
 {
     auto area = getLocalBounds();
-    area.removeFromTop(28);  // header
+    area.removeFromTop(36);  // header
     scrollView.setBounds(area);
 
     int margin = 4;

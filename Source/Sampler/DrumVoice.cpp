@@ -20,14 +20,15 @@ DrumVoice::DrumVoice()
     adsr.setParameters(params);
 }
 
-void DrumVoice::trigger(const DrumSample* sample, float gainValue, int channel)
+void DrumVoice::trigger(const DrumSample* sample, float gainValue, int outputStem, float trimMul)
 {
     DBG("*** DrumVoice::trigger ENTER ***");
     currentSample = sample;
     position = 0;
     gain = gainValue;
+    micTrimMul = trimMul;
     active = true;
-    outputChannel = channel;
+    outputChannel = outputStem;
     
     DBG("*** DrumVoice::trigger: sampleRate=" << adsr.getSampleRate() << " ***");
     DBG("*** Sample buffer channels=" << (sample ? sample->buffer.getNumChannels() : 0) 
@@ -77,7 +78,7 @@ void DrumVoice::process(juce::AudioBuffer<float>& output, int startSample, int n
         {
             int srcCh = ch % currentSample->buffer.getNumChannels();
             float sample = currentSample->buffer.getSample(srcCh, srcPos);
-            output.addSample(ch, startSample + i, sample * gain * envelope);
+            output.addSample(ch, startSample + i, sample * gain * envelope * micTrimMul);
         }
     }
     

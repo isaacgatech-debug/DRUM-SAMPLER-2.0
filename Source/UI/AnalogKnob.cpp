@@ -1,7 +1,11 @@
 #include "AnalogKnob.h"
+#include "PluginColors.h"
 
 AnalogKnob::AnalogKnob(Style knobStyle)
-    : style(knobStyle)
+    : style(knobStyle),
+      accentColor(juce::Colour(PluginColors::accent)),
+      metalColor(juce::Colour(0xFF505050)),
+      darkMetal(juce::Colour(0xFF353535))
 {
     setSliderStyle(juce::Slider::RotaryVerticalDrag);
     setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
@@ -57,24 +61,10 @@ void AnalogKnob::drawKnobFace(juce::Graphics& g, juce::Rectangle<float> bounds)
         false));
     g.fillPath(face);
     
-    // Punk accent ring near edge
+    // Thin accent ring (DAW-style, not decorative)
     auto accentBounds = bounds.reduced(8.0f);
-    g.setColour(accentColor.withAlpha(0.6f));
-    g.drawEllipse(accentBounds, 1.5f);
-    
-    // Screw marks for analog feel
-    float screwRadius = radius * 0.7f;
-    for (int i = 0; i < 4; ++i)
-    {
-        float angle = juce::MathConstants<float>::halfPi * i + juce::MathConstants<float>::pi / 4;
-        float sx = center.x + std::cos(angle) * screwRadius;
-        float sy = center.y + std::sin(angle) * screwRadius;
-        
-        g.setColour(darkMetal.darker(0.3f));
-        g.fillEllipse(sx - 2.0f, sy - 2.0f, 4.0f, 4.0f);
-        g.setColour(metalColor.brighter(0.1f));
-        g.fillEllipse(sx - 1.0f, sy - 1.0f, 2.0f, 2.0f);
-    }
+    g.setColour(accentColor.withAlpha(0.45f));
+    g.drawEllipse(accentBounds, 1.0f);
 }
 
 void AnalogKnob::drawKnobIndicator(juce::Graphics& g, juce::Rectangle<float> bounds, float angle)
@@ -90,17 +80,8 @@ void AnalogKnob::drawKnobIndicator(juce::Graphics& g, juce::Rectangle<float> bou
     // Draw indicator dot
     float dotSize = style == Style::Large ? 8.0f : (style == Style::Small ? 4.0f : 6.0f);
     
-    // Glow effect
-    g.setColour(accentColor.withAlpha(0.4f));
-    g.fillEllipse(ix - dotSize/2 - 2, iy - dotSize/2 - 2, dotSize + 4, dotSize + 4);
-    
-    // Main dot
     g.setColour(accentColor);
     g.fillEllipse(ix - dotSize/2, iy - dotSize/2, dotSize, dotSize);
-    
-    // Highlight
-    g.setColour(juce::Colours::white.withAlpha(0.6f));
-    g.fillEllipse(ix - dotSize/4, iy - dotSize/4, dotSize/2, dotSize/2);
 }
 
 void AnalogKnob::drawTickMarks(juce::Graphics& g, juce::Rectangle<float> bounds)
@@ -138,12 +119,12 @@ void AnalogKnob::drawLabel(juce::Graphics& g, juce::Rectangle<float> bounds)
     if (labelText.isEmpty())
         return;
     
-    float fontSize = style == Style::Large ? 12.0f : (style == Style::Small ? 9.0f : 10.0f);
+    float fontSize = style == Style::Large ? 14.0f : (style == Style::Small ? 10.5f : 12.0f);
     g.setFont(juce::FontOptions(fontSize, juce::Font::bold));
-    g.setColour(juce::Colours::lightgrey);
+    g.setColour(juce::Colour(PluginColors::textPrimary).withAlpha(0.85f));
     
     // Draw label at bottom
-    auto labelBounds = bounds.removeFromBottom(16.0f);
+    auto labelBounds = bounds.removeFromBottom(20.0f);
     g.drawText(labelText, labelBounds, juce::Justification::centred, false);
 }
 
@@ -153,9 +134,9 @@ float AnalogKnob::getKnobRadius() const
     
     switch (style)
     {
-        case Style::Small:  return baseSize * 0.35f;
-        case Style::Large:  return baseSize * 0.45f;
-        default:            return baseSize * 0.40f;
+        case Style::Small:  return baseSize * 0.38f;
+        case Style::Large:  return baseSize * 0.48f;
+        default:            return baseSize * 0.43f;
     }
 }
 

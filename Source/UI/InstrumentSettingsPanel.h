@@ -1,28 +1,29 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <memory>
 #include "PluginColors.h"
 
+class DrumTechProcessor;
+class MicTonesRows;
+
 /**
- * Right-side 260px instrument settings panel for DrumKitView.
- * Contains: Level, Reverse, MIDI Monitor, Voice&Layer (collapsible),
- * per-param toggles, MIDI Mapping (collapsible), and bottom button.
+ * Right-side instrument settings panel for DrumKitView (width from DrumKitView::settingsPanelW).
+ * Pitch, per-mic tone trims (15 stems), Level, collapsible sections, MIDI mapping.
  */
 class InstrumentSettingsPanel : public juce::Component
 {
 public:
     InstrumentSettingsPanel();
+    ~InstrumentSettingsPanel() override;
 
     void paint  (juce::Graphics& g) override;
     void resized() override;
     void mouseDown(const juce::MouseEvent& e) override;
 
+    void setProcessor(DrumTechProcessor* proc) { processor = proc; syncControlsFromSampler(); }
+
     /** Called when a DrumPiece is clicked — updates the panel for that drum. */
-    void setSelectedDrum(const juce::String& drumName, int midiNote)
-    {
-        selectedDrumName = drumName;
-        selectedMidiNote = midiNote;
-        repaint();
-    }
+    void setSelectedDrum(const juce::String& drumName, int midiNote);
 
 private:
     void drawSectionHeader(juce::Graphics& g, juce::Rectangle<float> area,
@@ -32,9 +33,14 @@ private:
     void drawToggleRow(juce::Graphics& g, juce::Rectangle<float> area,
                        const juce::String& label, bool state);
 
-    void layoutRows();
+    void syncControlsFromSampler();
 
     // Controls
+    juce::Slider pitchSlider;
+    juce::Label  pitchReadout;
+    juce::ComboBox articulationBox;
+    juce::ComboBox velocityCurveBox;
+
     juce::Slider levelSlider;
     juce::Label  levelReadout;
     juce::TextButton soloBtn  {"S"};
@@ -43,7 +49,10 @@ private:
     juce::Slider softHitSlider;
     juce::Label  softHitReadout;
 
-    juce::TextButton midiSettingsBtn{"MIDI In/E-Drums Settings"};
+    juce::TextButton midiSettingsBtn;
+
+    juce::Viewport micViewport;
+    std::unique_ptr<MicTonesRows> micTones;
 
     // Toggle states
     bool reverseOn      = false;
@@ -61,6 +70,8 @@ private:
     juce::String selectedDrumName = "KICK";
     int          selectedMidiNote = 36;
 
+    DrumTechProcessor* processor = nullptr;
+
     // Damper slider (0 = dead, 1 = live)
     juce::Slider damperSlider;
     juce::Label  damperLabel;
@@ -72,6 +83,8 @@ private:
     juce::Rectangle<int> reverseRow, midiMonitorRow, smoothingRow,
                           hiHatRow, levelEnvRow, velocityGateRow,
                           voiceLayerHeader, midiMappingHeader;
+
+    static constexpr int reverseSubLabelH = 12;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(InstrumentSettingsPanel)
 };

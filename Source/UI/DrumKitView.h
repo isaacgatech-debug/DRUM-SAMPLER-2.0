@@ -15,9 +15,16 @@ public:
     void paint  (juce::Graphics& g) override;
     void resized() override;
 
+    void setKitBuilderMode(bool shouldShow) { kitBuilderMode = shouldShow; resized(); repaint(); }
+    bool isKitBuilderMode() const noexcept { return kitBuilderMode; }
+
+    std::function<void()> onMixerPressed;
+    std::function<void()> onHomePressed;
+
     void setProcessor(DrumTechProcessor* proc)
     {
         processor = proc;
+        settingsPanel.setProcessor(proc);
         for (auto* p : allPieces())
             if (p) p->setProcessor(proc);
     }
@@ -29,6 +36,93 @@ public:
     }
 
 private:
+    class AnimatedNavButton : public juce::Component, private juce::Timer
+    {
+    public:
+        enum class Orientation { Horizontal, Vertical };
+
+        AnimatedNavButton(const juce::String& buttonText, Orientation o, bool leftFacing = false)
+            : text(buttonText), orientation(o), leftEdge(leftFacing)
+        {
+            setMouseCursor(juce::MouseCursor::PointingHandCursor);
+            startTimerHz(60);
+        }
+
+        std::function<void()> onPressed;
+
+        void paint(juce::Graphics& g) override
+        {
+            auto r = getLocalBounds().toFloat().reduced(1.0f);
+            const float t = static_cast<float>(juce::Time::getMillisecondCounterHiRes() * 0.001);
+            const float pulse = 0.65f + 0.35f * std::sin(t * 2.2f);
+            const float hover = hovered ? 1.0f : 0.0f;
+
+            auto base = juce::Colour(0xFF3B434B).withAlpha(0.86f + 0.08f * hover);
+            auto outline = juce::Colour(PluginColors::accent).withAlpha(0.38f + 0.32f * hover);
+            auto glow = juce::Colour(PluginColors::accent).withAlpha((0.08f + 0.12f * hover) * pulse);
+
+            g.setColour(glow);
+            g.fillRoundedRectangle(r.expanded(3.0f), 12.0f);
+
+            g.setColour(base);
+            g.fillRoundedRectangle(r, 10.0f);
+            g.setColour(outline);
+            g.drawRoundedRectangle(r, 10.0f, 1.2f);
+
+            g.setColour(juce::Colours::white.withAlpha(pressed ? 0.95f : 0.86f));
+            g.setFont(PluginFonts::label(orientation == Orientation::Horizontal ? 24.0f : 20.0f));
+
+            if (orientation == Orientation::Horizontal)
+            {
+                g.drawText(text, r, juce::Justification::centred, false);
+            }
+            else
+            {
+                const auto letters = juce::StringArray::fromTokens(text, "", "");
+                int glyphH = juce::jmax(12, static_cast<int>(r.getHeight() / juce::jmax(1, text.length())));
+                int y = static_cast<int>(r.getY() + 8.0f);
+                for (int i = 0; i < text.length(); ++i)
+                {
+                    const juce::String ch(text.substring(i, i + 1));
+                    g.drawText(ch, static_cast<int>(r.getX()), y, static_cast<int>(r.getWidth()), glyphH,
+                               juce::Justification::centred, false);
+                    y += glyphH - 2;
+                }
+            }
+
+            if (leftEdge)
+            {
+                g.setColour(juce::Colours::black.withAlpha(0.15f));
+                g.fillRect(r.removeFromRight(2.0f));
+            }
+        }
+
+        void mouseEnter(const juce::MouseEvent&) override { hovered = true; repaint(); }
+        void mouseExit(const juce::MouseEvent&) override { hovered = false; pressed = false; repaint(); }
+        void mouseDown(const juce::MouseEvent&) override { pressed = true; repaint(); }
+        void mouseUp(const juce::MouseEvent&) override
+        {
+            const bool trigger = pressed && getLocalBounds().contains(getMouseXYRelative());
+            pressed = false;
+            repaint();
+            if (trigger && onPressed)
+                onPressed();
+        }
+
+    private:
+        void timerCallback() override
+        {
+            if (hovered)
+                repaint();
+        }
+
+        juce::String text;
+        Orientation orientation;
+        bool leftEdge = false;
+        bool hovered = false;
+        bool pressed = false;
+    };
+
     // -----------------------------------------------------------------------
     // Kick beater animation overlay
     // -----------------------------------------------------------------------
@@ -102,7 +196,7 @@ private:
     };
 
     // -----------------------------------------------------------------------
-    // Invisible clickable hotspot with cyan glow + selection
+    // Invisible clickable hotspot with accent glow + selection
     // -----------------------------------------------------------------------
     class DrumPiece : public juce::Component, private juce::Timer
     {
@@ -138,7 +232,7 @@ private:
             // Label on selected
             if (isSelected)
             {
-                g.setFont(PluginFonts::label(8.5f));
+                g.setFont(PluginFonts::label(11.0f));
                 g.setColour(ring);
                 g.drawText(pieceName, b, juce::Justification::centred, false);
             }
@@ -237,10 +331,16 @@ private:
     // -----------------------------------------------------------------------
     DrumTechProcessor* processor = nullptr;
     juce::Image backdropImage;
+    bool kitBuilderMode = false;
 
-    // Right settings panel (260px)
+    AnimatedNavButton kitBuilderBtn { "KIT BUILDER", AnimatedNavButton::Orientation::Horizontal };
+    AnimatedNavButton homeBtn       { "HOME",        AnimatedNavButton::Orientation::Horizontal };
+    AnimatedNavButton triggerBtn    { "TRIGGER",     AnimatedNavButton::Orientation::Vertical, true };
+    AnimatedNavButton mixerBtn      { "MIXER",       AnimatedNavButton::Orientation::Vertical };
+
+    // Right settings panel
     InstrumentSettingsPanel settingsPanel;
-    static constexpr int settingsPanelW = 260;
+    static constexpr int settingsPanelW = 336;
 
     // Kick beater animation overlay
     KickBeaterOverlay kickBeater;

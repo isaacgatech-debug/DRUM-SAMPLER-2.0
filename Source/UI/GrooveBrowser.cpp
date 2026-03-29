@@ -9,6 +9,7 @@ GrooveBrowser::GrooveBrowser()
     addAndMakeVisible(searchLabel);
     
     searchBox.setTextToShowWhenEmpty("Search grooves...", juce::Colours::grey);
+    searchBox.setFont(PluginFonts::mono(13.0f));
     searchBox.onTextChange = [this] { filterGrooves(); };
     addAndMakeVisible(searchBox);
     
@@ -26,14 +27,14 @@ GrooveBrowser::GrooveBrowser()
     tempoMinSlider.setRange(60, 200, 1);
     tempoMinSlider.setValue(60);
     tempoMinSlider.setSliderStyle(juce::Slider::LinearHorizontal);
-    tempoMinSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 50, 20);
+    tempoMinSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 56, 24);
     tempoMinSlider.onValueChange = [this] { filterGrooves(); };
     addAndMakeVisible(tempoMinSlider);
     
     tempoMaxSlider.setRange(60, 200, 1);
     tempoMaxSlider.setValue(200);
     tempoMaxSlider.setSliderStyle(juce::Slider::LinearHorizontal);
-    tempoMaxSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 50, 20);
+    tempoMaxSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 56, 24);
     tempoMaxSlider.onValueChange = [this] { filterGrooves(); };
     addAndMakeVisible(tempoMaxSlider);
     
@@ -43,7 +44,7 @@ GrooveBrowser::GrooveBrowser()
     
     grooveList.setModel(listModel.get());
     grooveList.setColour(juce::ListBox::backgroundColourId, listBgColour);
-    grooveList.setRowHeight(30);
+    grooveList.setRowHeight(38);
     addAndMakeVisible(grooveList);
     
     scanButton.onClick = [this] {
@@ -84,49 +85,50 @@ void GrooveBrowser::paint(juce::Graphics& g)
     g.fillAll(bgColour);
     
     g.setColour(juce::Colours::white);
-    g.setFont(20.0f);
-    g.drawText("Groove Browser", 10, 10, 200, 30, juce::Justification::centredLeft);
+    g.setFont(PluginFonts::label(22.0f));
+    g.drawText("Groove Browser", 14, 12, 280, 36, juce::Justification::centredLeft);
 }
 
 void GrooveBrowser::resized()
 {
-    auto bounds = getLocalBounds().reduced(10);
-    bounds.removeFromTop(40);
+    auto bounds = getLocalBounds().reduced(14);
+    bounds.removeFromTop(48);
     
-    auto topControls = bounds.removeFromTop(80);
+    auto topControls = bounds.removeFromTop(96);
     
-    auto searchRow = topControls.removeFromTop(25);
-    searchLabel.setBounds(searchRow.removeFromLeft(60));
-    searchBox.setBounds(searchRow.removeFromLeft(200));
-    searchRow.removeFromLeft(20);
-    categoryLabel.setBounds(searchRow.removeFromLeft(70));
-    categoryFilter.setBounds(searchRow.removeFromLeft(150));
-    searchRow.removeFromLeft(20);
-    favoritesOnly.setBounds(searchRow.removeFromLeft(120));
+    auto searchRow = topControls.removeFromTop(30);
+    searchLabel.setBounds(searchRow.removeFromLeft(72));
+    searchBox.setBounds(searchRow.removeFromLeft(240));
+    searchRow.removeFromLeft(24);
+    categoryLabel.setBounds(searchRow.removeFromLeft(84));
+    categoryFilter.setBounds(searchRow.removeFromLeft(180));
+    searchRow.removeFromLeft(24);
+    favoritesOnly.setBounds(searchRow.removeFromLeft(140));
     
-    topControls.removeFromTop(5);
+    topControls.removeFromTop(8);
     
-    auto tempoRow = topControls.removeFromTop(25);
-    tempoLabel.setBounds(tempoRow.removeFromLeft(100));
-    tempoMinSlider.setBounds(tempoRow.removeFromLeft(150));
-    tempoRow.removeFromLeft(10);
-    tempoMaxSlider.setBounds(tempoRow.removeFromLeft(150));
+    auto tempoRow = topControls.removeFromTop(30);
+    tempoLabel.setBounds(tempoRow.removeFromLeft(120));
+    tempoMinSlider.setBounds(tempoRow.removeFromLeft(180));
+    tempoRow.removeFromLeft(14);
+    tempoMaxSlider.setBounds(tempoRow.removeFromLeft(180));
     
-    topControls.removeFromTop(5);
+    topControls.removeFromTop(8);
     
-    auto buttonRow = topControls.removeFromTop(30);
-    scanButton.setBounds(buttonRow.removeFromLeft(120));
-    buttonRow.removeFromLeft(10);
-    previewButton.setBounds(buttonRow.removeFromLeft(100));
-    buttonRow.removeFromLeft(10);
-    addToTimelineButton.setBounds(buttonRow.removeFromLeft(130));
+    auto buttonRow = topControls.removeFromTop(36);
+    scanButton.setBounds(buttonRow.removeFromLeft(140));
+    buttonRow.removeFromLeft(12);
+    previewButton.setBounds(buttonRow.removeFromLeft(120));
+    buttonRow.removeFromLeft(12);
+    addToTimelineButton.setBounds(buttonRow.removeFromLeft(160));
     
-    bounds.removeFromTop(10);
+    bounds.removeFromTop(12);
     
-    auto bottomBar = bounds.removeFromBottom(25);
+    auto bottomBar = bounds.removeFromBottom(30);
     statusLabel.setBounds(bottomBar);
+    statusLabel.setFont(PluginFonts::mono(12.0f));
     
-    bounds.removeFromBottom(5);
+    bounds.removeFromBottom(6);
     grooveList.setBounds(bounds);
 }
 

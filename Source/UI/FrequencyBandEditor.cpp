@@ -3,13 +3,13 @@
 #include <cmath>
 
 const juce::Colour FrequencyBandEditor::bandPalette[] = {
-    juce::Colour(0xFF00C8FF),  // cyan
-    juce::Colour(0xFFF97316),  // orange
-    juce::Colour(0xFFA855F7),  // purple
-    juce::Colour(0xFF22C55E),  // green
-    juce::Colour(0xFFEC4899),  // pink
-    juce::Colour(0xFFEAB308),  // yellow
-    juce::Colour(0xFF3B82F6),  // blue
+    juce::Colour(PluginColors::accent),
+    juce::Colour(0xFFC49A6A),
+    juce::Colour(0xFF9A8AAC),
+    juce::Colour(0xFF7FA88A),
+    juce::Colour(0xFFB88A9A),
+    juce::Colour(0xFFC9B86A),
+    juce::Colour(0xFF7A90B0),
 };
 const int FrequencyBandEditor::paletteSize = 7;
 

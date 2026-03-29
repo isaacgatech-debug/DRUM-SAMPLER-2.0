@@ -4,9 +4,40 @@
 
 DrumKitView::DrumKitView()
 {
-    // Load backdrop from binary data
-    backdropImage = juce::ImageFileFormat::loadFrom(BinaryData::drumbackdrop_png,
-                                                    BinaryData::drumbackdrop_pngSize);
+    auto loadEmbeddedByOriginalName = [](const juce::String& wanted) -> juce::Image
+    {
+        for (int i = 0; i < BinaryData::namedResourceListSize; ++i)
+        {
+            const auto* original = BinaryData::originalFilenames[i];
+            if (original == nullptr)
+                continue;
+            if (wanted.equalsIgnoreCase(juce::String(original)))
+            {
+                int dataSize = 0;
+                const auto* resourceName = BinaryData::namedResourceList[i];
+                const auto* data = BinaryData::getNamedResource(resourceName, dataSize);
+                if (data != nullptr && dataSize > 0)
+                    return juce::ImageFileFormat::loadFrom(data, dataSize);
+            }
+        }
+        return {};
+    };
+
+    // Load backdrop from embedded binary resource (prefer latest artboard).
+    backdropImage = loadEmbeddedByOriginalName("Drum Tech (1).jpg");
+    if (!backdropImage.isValid())
+        backdropImage = loadEmbeddedByOriginalName("Drum Tech.jpg");
+
+    if (!backdropImage.isValid())
+    {
+        auto fallback = juce::File::getCurrentWorkingDirectory()
+                            .getChildFile("Resources/Backdrops/Drum Tech (1).jpg");
+        if (!fallback.existsAsFile())
+            fallback = juce::File::getCurrentWorkingDirectory()
+                            .getChildFile("Resources/Backdrops/Drum Tech.jpg");
+        if (fallback.existsAsFile())
+            backdropImage = juce::ImageFileFormat::loadFrom(fallback);
+    }
     if (!backdropImage.isValid())
         LOG_ERROR("Failed to load backdrop image!");
 
@@ -51,6 +82,23 @@ DrumKitView::DrumKitView()
     // Child components
     addAndMakeVisible(settingsPanel);
     addAndMakeVisible(kickBeater);
+
+    addAndMakeVisible(kitBuilderBtn);
+    addAndMakeVisible(homeBtn);
+    addAndMakeVisible(triggerBtn);
+    addAndMakeVisible(mixerBtn);
+
+    kitBuilderBtn.onPressed = [this] { setKitBuilderMode(true); };
+    homeBtn.onPressed = [this]
+    {
+        setKitBuilderMode(false);
+        if (onHomePressed) onHomePressed();
+    };
+    mixerBtn.onPressed = [this]
+    {
+        if (onMixerPressed) onMixerPressed();
+    };
+    triggerBtn.onPressed = [] {};
     // pianoPanel disabled for build
     // addAndMakeVisible(pianoPanel);
 }
@@ -59,18 +107,19 @@ DrumKitView::DrumKitView()
 void DrumKitView::paint(juce::Graphics& g)
 {
     auto kitArea = getLocalBounds()
-                       .withTrimmedRight(settingsPanelW)
+                       .withTrimmedRight(kitBuilderMode ? settingsPanelW : 0)
                        // .withTrimmedBottom(pianoH)  // piano disabled
                        .toFloat();
 
     if (backdropImage.isValid())
     {
+        // Fill the kit area (crops edges) instead of letterboxing on wide windows.
         g.drawImage(backdropImage,
                     kitArea,
-                    juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize);
+                    juce::RectanglePlacement::centred | juce::RectanglePlacement::fillDestination);
 
-        // Subtle vignette
-        g.setColour(juce::Colours::black.withAlpha(0.1f));
+        // Subtle edge darkening
+        g.setColour(juce::Colours::black.withAlpha(0.12f));
         g.fillRect(kitArea);
     }
     else
@@ -83,10 +132,20 @@ void DrumKitView::paint(juce::Graphics& g)
 //==============================================================================
 void DrumKitView::resized()
 {
-    auto area = getLocalBounds();
+    auto fullArea = getLocalBounds();
+    auto area = fullArea;
 
     // Settings panel (right)
-    settingsPanel.setBounds(area.removeFromRight(settingsPanelW));
+    if (kitBuilderMode)
+    {
+        settingsPanel.setVisible(true);
+        settingsPanel.setBounds(area.removeFromRight(settingsPanelW));
+    }
+    else
+    {
+        settingsPanel.setVisible(false);
+        settingsPanel.setBounds(0, 0, 0, 0);
+    }
 
     // Piano keyboard disabled for build
     // pianoPanel.setBounds(area.removeFromBottom(pianoH));
@@ -151,4 +210,17 @@ void DrumKitView::resized()
         area.getX() + (int)(w * 0.77) - (int)(w * 0.120),
         (int)(h * 0.56) - (int)(h * 0.046),
         (int)(w * 0.239), (int)(h * 0.091));
+
+    // UI buttons aligned to artwork guides.
+    const int fw = fullArea.getWidth();
+    const int fh = fullArea.getHeight();
+    const int topW = static_cast<int>(fw * 0.25f);
+    const int topH = static_cast<int>(fh * 0.06f);
+    const int sideW = static_cast<int>(fw * 0.045f);
+    const int sideH = static_cast<int>(fh * 0.46f);
+
+    kitBuilderBtn.setBounds(static_cast<int>(fw * 0.375f), static_cast<int>(fh * 0.06f), topW, topH);
+    homeBtn.setBounds(static_cast<int>(fw * 0.375f), static_cast<int>(fh * 0.90f), topW, topH);
+    triggerBtn.setBounds(static_cast<int>(fw * 0.055f), static_cast<int>(fh * 0.27f), sideW, sideH);
+    mixerBtn.setBounds(static_cast<int>(fw * 0.90f), static_cast<int>(fh * 0.27f), sideW, sideH);
 }

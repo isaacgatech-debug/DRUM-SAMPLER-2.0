@@ -24,6 +24,17 @@ GrooveTimeline::GrooveTimeline()
     addAndMakeVisible(zoomInBtn);
     addAndMakeVisible(zoomOutBtn);
 
+    trackNameLabel.setText(trackDropdown.getButtonText(), juce::dontSendNotification);
+    trackNameLabel.setFont(PluginFonts::label(12.0f));
+    trackNameLabel.setColour(juce::Label::textColourId, juce::Colour(PluginColors::textPrimary));
+    trackNameLabel.setJustificationType(juce::Justification::centredLeft);
+    addAndMakeVisible(trackNameLabel);
+
+    trackDropdown.onClick = [this]
+    {
+        syncTrackNameLabel();
+    };
+
     zoomInBtn.onClick = [this]
     {
         scrollX = juce::jmax(0, scrollX - barWidth);
@@ -68,18 +79,39 @@ void GrooveTimeline::resized()
 {
     auto area = getLocalBounds();
 
-    auto trackBarArea = area.removeFromTop(trackBarH);
-    trackDropdown.setBounds(trackBarArea.removeFromLeft(80).reduced(2));
-    blockDropdown.setBounds(trackBarArea.removeFromLeft(70).reduced(2));
-    trackBarArea.removeFromLeft(4);
-    addTrackBtn.setBounds(trackBarArea.removeFromLeft(24).reduced(2));
-    selectBtn.setBounds(trackBarArea.removeFromRight(36).reduced(2));
-    cutBtn.setBounds(trackBarArea.removeFromRight(36).reduced(2));
-    zoomInBtn.setBounds(trackBarArea.removeFromRight(24).reduced(2));
-    zoomOutBtn.setBounds(trackBarArea.removeFromRight(24).reduced(2));
+    auto trackBarBounds = area.removeFromTop(trackBarH);
+    auto trackBarArea   = trackBarBounds;
+    trackDropdown.setBounds(trackBarArea.removeFromLeft(96).reduced(3));
+    blockDropdown.setBounds(trackBarArea.removeFromLeft(84).reduced(3));
+    trackBarArea.removeFromLeft(6);
+    addTrackBtn.setBounds(trackBarArea.removeFromLeft(34).reduced(3));
+    selectBtn.setBounds(trackBarArea.removeFromRight(44).reduced(3));
+    cutBtn.setBounds(trackBarArea.removeFromRight(44).reduced(3));
+    zoomInBtn.setBounds(trackBarArea.removeFromRight(40).reduced(3));
+    zoomOutBtn.setBounds(trackBarArea.removeFromRight(40).reduced(3));
+
+    const int gapL = addTrackBtn.getRight() + 6;
+    const int gapR = zoomOutBtn.getX() - 6;
+    if (gapR > gapL + 8)
+    {
+        trackNameLabel.setVisible(true);
+        trackNameLabel.setBounds(gapL, trackBarBounds.getY() + 2, gapR - gapL, trackBarBounds.getHeight() - 4);
+    }
+    else
+    {
+        trackNameLabel.setVisible(false);
+        trackNameLabel.setBounds(0, 0, 0, 0);
+    }
+
+    syncTrackNameLabel();
 
     area.removeFromTop(rulerH);   // ruler is painted
     rollRect = area.removeFromTop(rollH);
+}
+
+void GrooveTimeline::syncTrackNameLabel()
+{
+    trackNameLabel.setText(trackDropdown.getButtonText(), juce::dontSendNotification);
 }
 
 void GrooveTimeline::paint(juce::Graphics& g)
@@ -96,12 +128,6 @@ void GrooveTimeline::paint(juce::Graphics& g)
     g.drawHorizontalLine(static_cast<int>(trackBarArea.getBottom()) - 1,
                          trackBarArea.getX(), trackBarArea.getRight());
 
-    // Track name label
-    g.setFont(PluginFonts::label(10.0f));
-    g.setColour(juce::Colour(PluginColors::textPrimary));
-    g.drawText(trackDropdown.getButtonText(), static_cast<int>(trackBarArea.getX() + 160), static_cast<int>(trackBarArea.getY()),
-               80, static_cast<int>(trackBarArea.getHeight()), juce::Justification::centredLeft, false);
-
     drawRuler(g, rulerArea);
     drawRollArea(g, rollArea);
 }
@@ -113,7 +139,7 @@ void GrooveTimeline::drawRuler(juce::Graphics& g, juce::Rectangle<float> area)
     g.setColour(juce::Colour(PluginColors::pluginBorder));
     g.drawHorizontalLine(static_cast<int>(area.getBottom()) - 1, area.getX(), area.getRight());
 
-    g.setFont(PluginFonts::mono(9.0f));
+    g.setFont(PluginFonts::mono(11.0f));
     g.setColour(juce::Colour(PluginColors::textMuted));
 
     int numBars = static_cast<int>(area.getWidth()) / barWidth + 2;
@@ -178,39 +204,47 @@ void GrooveTimeline::drawBlock(juce::Graphics& g, const GrooveBlock& block,
     g.setColour(selected ? col : col.withAlpha(0.55f));
     g.drawRoundedRectangle(rect, 3.0f, selected ? 1.5f : 0.75f);
 
-    // Mini waveform decoration (random squiggle for visual)
+    auto inner = rect.reduced(6.0f, 4.0f);
+    constexpr float kMinWTwoLines = 104.0f;
+    constexpr float kNameH          = 15.0f;
+    constexpr float kTypeH          = 13.0f;
+
+    if (inner.getWidth() < kMinWTwoLines || inner.getHeight() < kNameH + kTypeH + 6.0f)
     {
-        juce::Path waveform;
-        float wy = rect.getCentreY();
-        float amp = rect.getHeight() * 0.18f;
-        int steps = static_cast<int>(rect.getWidth() / 3);
-        if (steps > 1)
-        {
-            waveform.startNewSubPath(rect.getX() + 2, wy);
-            for (int s = 0; s < steps; ++s)
-            {
-                float sx = rect.getX() + 2 + s * (rect.getWidth() - 4) / steps;
-                float sy = wy + amp * std::sin(s * 0.7f + block.startBar);
-                waveform.lineTo(sx, sy);
-            }
-            g.setColour(col.withAlpha(0.35f));
-            g.strokePath(waveform, juce::PathStrokeType(1.0f));
-        }
+        g.setFont(PluginFonts::label(11.0f));
+        g.setColour(col.brighter(0.4f));
+        g.drawText(block.name, inner, juce::Justification::centredLeft, true);
+        return;
     }
 
-    // Pattern name
-    g.setFont(PluginFonts::label(9.0f));
-    g.setColour(col.brighter(0.4f));
-    g.drawText(block.name,
-               rect.reduced(4.0f, 2.0f).removeFromTop(12.0f),
-               juce::Justification::centredLeft, true);
+    auto nameR = inner.removeFromTop(kNameH);
+    auto typeR = inner.removeFromBottom(kTypeH);
 
-    // Type label
-    g.setFont(PluginFonts::mono(8.0f));
-    g.setColour(col.withAlpha(0.75f));
-    g.drawText(PluginColors::grooveTypeName(block.type),
-               rect.reduced(4.0f, 2.0f).removeFromBottom(10.0f),
-               juce::Justification::centredLeft, true);
+    // Mini waveform in remaining middle band only (no overlap with text)
+    if (inner.getWidth() > 8.0f && inner.getHeight() > 4.0f)
+    {
+        juce::Path waveform;
+        const float wy = inner.getCentreY();
+        const float amp  = juce::jmin(inner.getHeight() * 0.35f, 10.0f);
+        int steps = juce::jmax(2, static_cast<int>(inner.getWidth() / 4));
+        waveform.startNewSubPath(inner.getX() + 2, wy);
+        for (int s = 0; s < steps; ++s)
+        {
+            float sx = inner.getX() + 2 + s * (inner.getWidth() - 4) / juce::jmax(1, steps - 1);
+            float sy = wy + amp * std::sin((float)s * 0.7f + (float)block.startBar);
+            waveform.lineTo(sx, sy);
+        }
+        g.setColour(col.withAlpha(0.35f));
+        g.strokePath(waveform, juce::PathStrokeType(1.0f));
+    }
+
+    g.setFont(PluginFonts::label(11.0f));
+    g.setColour(col.brighter(0.4f));
+    g.drawText(block.name, nameR, juce::Justification::centredLeft, true);
+
+    g.setFont(PluginFonts::mono(9.5f));
+    g.setColour(col.withAlpha(0.85f));
+    g.drawText(PluginColors::grooveTypeName(block.type), typeR, juce::Justification::centredLeft, true);
 }
 
 int GrooveTimeline::barToX(int bar) const
@@ -284,4 +318,80 @@ void GrooveTimeline::clearBlocks()
     blocks.clear();
     selectedBlock = draggingBlock = -1;
     repaint();
+}
+
+void GrooveTimeline::mouseMove(const juce::MouseEvent& e)
+{
+    if (!rollRect.contains(e.getPosition()))
+    {
+        setTooltip({});
+        return;
+    }
+
+    const int i = blockAtPoint(e.getPosition());
+    if (i >= 0 && i < static_cast<int>(blocks.size()))
+    {
+        const auto& b = blocks[static_cast<size_t>(i)];
+        setTooltip(b.name + " — " + PluginColors::grooveTypeName(b.type));
+    }
+    else
+    {
+        setTooltip({});
+    }
+}
+
+void GrooveTimeline::mouseExit(const juce::MouseEvent&)
+{
+    setTooltip({});
+}
+
+juce::MidiMessageSequence GrooveTimeline::buildSequenceForGrid() const
+{
+    juce::MidiMessageSequence seq;
+    for (const auto& b : blocks)
+    {
+        for (int bar = 0; bar < b.durationBars; ++bar)
+        {
+            const double barStartBeat = static_cast<double>((b.startBar - 1 + bar) * 4);
+            for (int step = 0; step < 16; ++step)
+            {
+                const double beat = barStartBeat + (static_cast<double>(step) * 0.25);
+                int note = 42;
+                int vel = 70;
+
+                if (b.type == 1) // fill
+                {
+                    note = (step % 4 == 0) ? 38 : 45;
+                    vel = 78 + (step % 8) * 5;
+                }
+                else if (b.type == 2) // chorus
+                {
+                    note = (step % 8 == 0) ? 36 : ((step % 4 == 0) ? 38 : 42);
+                    vel = (step % 4 == 0) ? 98 : 74;
+                }
+                else if (b.type == 3) // pre-chorus
+                {
+                    note = (step % 4 == 2) ? 38 : 42;
+                    vel = 78;
+                }
+                else
+                {
+                    note = (step % 8 == 0) ? 36 : ((step % 4 == 0) ? 38 : 42);
+                    vel = (step % 4 == 0) ? 86 : 66;
+                }
+
+                // Keep first v1 pass simple: 16th-note grid playback.
+                const auto on = juce::MidiMessage::noteOn(1, note, static_cast<juce::uint8>(juce::jlimit(1, 127, vel)));
+                const auto off = juce::MidiMessage::noteOff(1, note);
+                auto onMsg = on;
+                auto offMsg = off;
+                onMsg.setTimeStamp(beat);
+                offMsg.setTimeStamp(beat + 0.12);
+                seq.addEvent(onMsg);
+                seq.addEvent(offMsg);
+            }
+        }
+    }
+    seq.updateMatchedPairs();
+    return seq;
 }

@@ -1,19 +1,21 @@
 #include "ParametricEQWindow.h"
+#include "../Core/PluginProcessor.h"
 #include "ThemeManager.h"
+#include "PluginColors.h"
 
 //==============================================================================
-// Band colour palette
+// Band colour palette (muted, console-style)
 //==============================================================================
 const juce::Colour ParametricEQEditor::palette[] =
 {
-    juce::Colour(0xFF00C8FF),  // 0  cyan
-    juce::Colour(0xFFF97316),  // 1  orange
-    juce::Colour(0xFFA855F7),  // 2  purple
-    juce::Colour(0xFF22C55E),  // 3  green
-    juce::Colour(0xFFEC4899),  // 4  pink
-    juce::Colour(0xFFEAB308),  // 5  yellow
-    juce::Colour(0xFF3B82F6),  // 6  blue
-    juce::Colour(0xFFEF4444),  // 7  red
+    juce::Colour(PluginColors::accent),
+    juce::Colour(0xFFC49A6A),
+    juce::Colour(0xFF9A8AAC),
+    juce::Colour(0xFF7FA88A),
+    juce::Colour(0xFFB88A9A),
+    juce::Colour(0xFFC9B86A),
+    juce::Colour(0xFF7A90B0),
+    juce::Colour(0xFFB07070),
 };
 const int ParametricEQEditor::paletteSize = 8;
 
@@ -138,16 +140,25 @@ float ParametricEQEditor::computeMagnitudeDB(float freq, const Band& b)
 //==============================================================================
 ParametricEQEditor::ParametricEQEditor()
 {
-    addBand(80.0f,    0.0f);   // band 0 – Low Shelf
-    addBand(250.0f,   0.0f);   // band 1 – Peak
-    addBand(1000.0f,  0.0f);   // band 2 – Peak (mid)
-    addBand(4000.0f,  0.0f);   // band 3 – Peak (high mid)
-    addBand(16000.0f, 0.0f);   // band 4 – High Shelf
+    static const float df[8] = { 80.f, 200.f, 500.f, 1000.f, 2500.f, 5000.f, 10000.f, 14000.f };
+    static const int dt[8]   = { 1, 0, 0, 0, 0, 0, 0, 2 }; // Low shelf, peaks, high shelf
 
-    bands[0].type = Band::LowShelf;
-    bands[4].type = Band::HighShelf;
+    for (int i = 0; i < 8; ++i)
+    {
+        addBand(df[i], 0.0f);
+        bands.back().type = static_cast<Band::Type>(dt[i]);
+    }
+
+    typeCombo.addItem("Bell", 1);
+    typeCombo.addItem("Low Shelf", 2);
+    typeCombo.addItem("High Shelf", 3);
+    typeCombo.addItem("Low Pass", 4);
+    typeCombo.addItem("High Pass", 5);
+    typeCombo.onChange = [this] { typeComboChanged(); };
+    addAndMakeVisible(typeCombo);
 
     setMouseCursor(juce::MouseCursor::CrosshairCursor);
+    startTimerHz(30);
 }
 
 void ParametricEQEditor::addBand(float freq, float gain)
@@ -333,12 +344,12 @@ void ParametricEQEditor::drawBandInfoBar(juce::Graphics& g, juce::Rectangle<floa
     {
         const auto& b = bands[selectedBand];
 
-        // Color tab on left
         g.setColour(b.color);
         g.fillRect(area.removeFromLeft(4.0f));
 
-        // Band info
-        area = area.reduced(12.0f, 8.0f);
+        area.removeFromLeft(148.0f); // ComboBox region (child component)
+
+        area = area.reduced(8.0f, 8.0f);
 
         g.setFont(PluginFonts::mono(11.0f));
         g.setColour(tm.text());
@@ -350,41 +361,109 @@ void ParametricEQEditor::drawBandInfoBar(juce::Graphics& g, juce::Rectangle<floa
         juce::String gainStr = (b.gain >= 0 ? "+" : "") + juce::String(b.gain, 1) + " dB";
         juce::String qStr    = "Q " + juce::String(b.q, 2);
 
-        float colW = area.getWidth() / 5.0f;
-
-        // Type buttons
-        const char* typeNames[] = {"Peak","Lo Shelf","Hi Shelf","Lo Pass","Hi Pass"};
-        for (int t = 0; t < 5; ++t)
-        {
-            auto btn = area.removeFromLeft(colW).reduced(2.0f, 2.0f);
-            bool active = (b.type == static_cast<Band::Type>(t));
-            g.setColour(active ? b.color : tm.surfaceHi());
-            g.fillRoundedRectangle(btn, 3.0f);
-            g.setColour(active ? juce::Colours::black : tm.muted());
-            g.setFont(PluginFonts::label(8.5f));
-            g.drawText(typeNames[t], btn, juce::Justification::centred, false);
-
-            typeBtnRect[t] = btn.toNearestInt();
-        }
-
-        // Freq, gain, Q labels
         g.setFont(PluginFonts::mono(12.0f));
         g.setColour(b.color);
-        auto valArea = getLocalBounds().toFloat().removeFromBottom(32.0f).reduced(12.0f, 2.0f);
+        auto valArea = getLocalBounds().toFloat().removeFromBottom(32.0f).reduced(160.0f, 2.0f);
         g.drawText("FREQ: " + freqStr + "   GAIN: " + gainStr + "   " + qStr
-                   + "   TYPE: " + b.typeName(),
+                   + "   " + (b.enabled ? "" : "BYPASS "),
                    valArea, juce::Justification::centredLeft, false);
     }
     else
     {
         g.setFont(PluginFonts::label(9.0f));
         g.setColour(tm.muted());
-        g.drawText("Click a band node to select. Drag to adjust frequency / gain. Scroll = Q.",
+        g.drawText("Click a band node to select. Drag freq/gain. Scroll = Q. Type = menu.",
                    area.reduced(12.0f, 0.0f), juce::Justification::centredLeft, false);
     }
 }
 
-void ParametricEQEditor::resized() {}
+void ParametricEQEditor::resized()
+{
+    auto bar = getLocalBounds().removeFromBottom(72);
+    typeCombo.setBounds(bar.removeFromLeft(136).reduced(8, 22));
+}
+
+void ParametricEQEditor::timerCallback()
+{
+    if (processor != nullptr && eqChannel >= 0 && dragBand < 0 && !typeCombo.isPopupActive())
+        pullFromApvts();
+}
+
+void ParametricEQEditor::setProcessorTarget(DrumTechProcessor* p, int mixerChannelIndex)
+{
+    processor = p;
+    eqChannel = mixerChannelIndex;
+    pullFromApvts();
+}
+
+void ParametricEQEditor::pullFromApvts()
+{
+    if (processor == nullptr || eqChannel < 0)
+        return;
+
+    auto& ap = processor->getAPVTS();
+
+    for (int i = 0; i < juce::jmin(8, static_cast<int>(bands.size())); ++i)
+    {
+        juce::String pb = "eqCh" + juce::String(eqChannel) + "Band" + juce::String(i);
+        if (auto* raw = ap.getRawParameterValue(pb + "Freq"))
+            bands[static_cast<size_t>(i)].freq = raw->load();
+        if (auto* raw = ap.getRawParameterValue(pb + "Gain"))
+            bands[static_cast<size_t>(i)].gain = raw->load();
+        if (auto* raw = ap.getRawParameterValue(pb + "Q"))
+            bands[static_cast<size_t>(i)].q = raw->load();
+        if (auto* pc = dynamic_cast<juce::AudioParameterChoice*>(ap.getParameter(pb + "Type")))
+            bands[static_cast<size_t>(i)].type = static_cast<Band::Type>(pc->getIndex());
+        if (auto* raw = ap.getRawParameterValue(pb + "Bypass"))
+            bands[static_cast<size_t>(i)].enabled = raw->load() <= 0.5f;
+    }
+
+    if (selectedBand >= 0 && selectedBand < static_cast<int>(bands.size()))
+        typeCombo.setSelectedId(static_cast<int>(bands[static_cast<size_t>(selectedBand)].type) + 1,
+                                juce::dontSendNotification);
+
+    repaint();
+}
+
+void ParametricEQEditor::pushBandToApvts(int bandIndex)
+{
+    if (processor == nullptr || eqChannel < 0
+        || bandIndex < 0 || bandIndex >= static_cast<int>(bands.size()))
+        return;
+
+    const auto& b = bands[static_cast<size_t>(bandIndex)];
+    juce::String pb = "eqCh" + juce::String(eqChannel) + "Band" + juce::String(bandIndex);
+    auto& ap = processor->getAPVTS();
+
+    if (auto* p = ap.getParameter(pb + "Freq"))
+        p->setValueNotifyingHost(p->convertTo0to1(b.freq));
+    if (auto* p = ap.getParameter(pb + "Gain"))
+        p->setValueNotifyingHost(p->convertTo0to1(b.gain));
+    if (auto* p = ap.getParameter(pb + "Q"))
+        p->setValueNotifyingHost(p->convertTo0to1(b.q));
+
+    if (auto* pc = dynamic_cast<juce::AudioParameterChoice*>(ap.getParameter(pb + "Type")))
+    {
+        const int maxI = juce::jmax(0, pc->choices.size() - 1);
+        const float norm = maxI > 0 ? static_cast<float>(static_cast<int>(b.type)) / static_cast<float>(maxI) : 0.0f;
+        pc->setValueNotifyingHost(norm);
+    }
+
+    if (auto* pbb = dynamic_cast<juce::AudioParameterBool*>(ap.getParameter(pb + "Bypass")))
+        *pbb = !b.enabled;
+}
+
+void ParametricEQEditor::typeComboChanged()
+{
+    if (selectedBand < 0 || selectedBand >= static_cast<int>(bands.size()))
+        return;
+
+    const int t = typeCombo.getSelectedId() - 1;
+    bands[static_cast<size_t>(selectedBand)].type =
+        static_cast<Band::Type>(juce::jlimit(0, 4, t));
+    pushBandToApvts(selectedBand);
+    repaint();
+}
 
 int ParametricEQEditor::hitTestBand(juce::Point<float> pt) const
 {
@@ -405,32 +484,20 @@ void ParametricEQEditor::mouseDown(const juce::MouseEvent& e)
 {
     auto pt = e.position;
 
-    // Check type buttons
-    if (selectedBand >= 0)
-    {
-        for (int t = 0; t < 5; ++t)
-        {
-            if (typeBtnRect[t].contains(e.getPosition()))
-            {
-                bands[selectedBand].type = static_cast<Band::Type>(t);
-                repaint();
-                return;
-            }
-        }
-    }
-
     int hit = hitTestBand(pt);
     if (hit >= 0)
     {
         dragBand  = hit;
         selectedBand = hit;
         dragStart = pt;
-        dragStartFreq = bands[hit].freq;
-        dragStartGain = bands[hit].gain;
+        dragStartFreq = bands[static_cast<size_t>(hit)].freq;
+        dragStartGain = bands[static_cast<size_t>(hit)].gain;
+        typeCombo.setSelectedId(static_cast<int>(bands[static_cast<size_t>(hit)].type) + 1,
+                                juce::dontSendNotification);
     }
     else
     {
-        // Deselect
+        dragBand = -1;
         selectedBand = -1;
     }
     repaint();
@@ -449,13 +516,15 @@ void ParametricEQEditor::mouseDrag(const juce::MouseEvent& e)
     float newGain = juce::jlimit(-maxGain, maxGain,
                                  dragStartGain - dy * (maxGain * 2.0f / da.getHeight()));
 
-    bands[dragBand].freq = newFreq;
-    bands[dragBand].gain = newGain;
+    bands[static_cast<size_t>(dragBand)].freq = newFreq;
+    bands[static_cast<size_t>(dragBand)].gain = newGain;
     repaint();
 }
 
 void ParametricEQEditor::mouseUp(const juce::MouseEvent&)
 {
+    if (dragBand >= 0)
+        pushBandToApvts(dragBand);
     dragBand = -1;
 }
 
@@ -468,36 +537,30 @@ void ParametricEQEditor::mouseMove(const juce::MouseEvent& e)
 
 void ParametricEQEditor::mouseDoubleClick(const juce::MouseEvent& e)
 {
-    auto da = displayArea();
-    int hit = hitTestBand(e.position);
-    if (hit < 0 && da.contains(e.position))
-    {
-        // Add new band at click position
-        float freq = xToFreq(e.position.x - da.getX(), da.getWidth());
-        float gain = yToGain(e.position.y - da.getY(), da.getHeight());
-        addBand(freq, gain);
-        selectedBand = static_cast<int>(bands.size()) - 1;
-        repaint();
-    }
+    juce::ignoreUnused(e);
 }
 
 void ParametricEQEditor::mouseWheelMove(const juce::MouseEvent&,
                                          const juce::MouseWheelDetails& w)
 {
     if (selectedBand < 0) return;
-    bands[selectedBand].q = juce::jlimit(0.1f, 12.0f,
-                                          bands[selectedBand].q + w.deltaY * 0.5f);
+    bands[static_cast<size_t>(selectedBand)].q =
+        juce::jlimit(0.1f, 24.0f,
+                     bands[static_cast<size_t>(selectedBand)].q + w.deltaY * 0.5f);
+    pushBandToApvts(selectedBand);
     repaint();
 }
 
 //==============================================================================
 // ParametricEQWindow
 //==============================================================================
-ParametricEQWindow::ParametricEQWindow(const juce::String& channelName)
+ParametricEQWindow::ParametricEQWindow(DrumTechProcessor* processor, int mixerChannelIndex,
+                                         const juce::String& channelName)
     : juce::DocumentWindow("EQ — " + channelName,
                            juce::Colour(PluginColors::pluginPanel),
                            juce::DocumentWindow::allButtons)
 {
+    eqEditor.setProcessorTarget(processor, mixerChannelIndex);
     setUsingNativeTitleBar(false);
     setContentNonOwned(&eqEditor, false);
     setResizable(true, false);

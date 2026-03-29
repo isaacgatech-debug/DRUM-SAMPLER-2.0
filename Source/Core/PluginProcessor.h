@@ -3,6 +3,7 @@
 #include <array>
 #include <atomic>
 #include "../Sampler/SamplerEngine.h"
+#include "MicBusLayout.h"
 #include "../Mixer/MixerChannel.h"
 #include "../Mixer/BusManager.h"
 #include "../Grooves/GrooveLibrary.h"
@@ -49,6 +50,9 @@ public:
     const juce::AudioProcessorValueTreeState& getAPVTS() const { return apvts; }
     
     SamplerEngine& getSamplerEngine() { return samplerEngine; }
+    const SamplerEngine& getSamplerEngine() const { return samplerEngine; }
+
+    static constexpr int getNumMicBuses() noexcept { return MicBus::count; }
     BusManager& getBusManager() { return busManager; }
     MixerChannel& getMixerChannel(int index);
     MixerChannel* getMixerChannelForInput(int inputIndex);
@@ -100,7 +104,7 @@ private:
     std::atomic<bool> recentMidiNotes[128];
     BusManager busManager;
     std::vector<std::unique_ptr<MixerChannel>> mixerChannels;
-    std::array<juce::AudioBuffer<float>, 12> mixerStemBuffers;
+    std::array<juce::AudioBuffer<float>, MicBus::count> mixerStemBuffers;
     GrooveLibrary grooveLibrary;
     MIDIPlayer midiPlayer;
     AudioTriggerEngine triggerEngine;
@@ -108,6 +112,8 @@ private:
     PluginManager pluginManager;
     
     juce::File lastLoadedFolder;
+
+    bool builtinEqInserted = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrumTechProcessor)
 };

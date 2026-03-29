@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "../UI/PluginColors.h"
 #include "GrooveLibrary.h"
 #include "MIDIPlayer.h"
 #include <vector>
@@ -59,7 +60,7 @@ private:
     
     juce::Colour bgColour{0xFF2A2A2A};
     juce::Colour gridColour{0xFF3A3A3A};
-    juce::Colour playheadColour{0xFFE8A020};
+    juce::Colour playheadColour{juce::Colour(PluginColors::accent)};
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GrooveTimeline)
 };

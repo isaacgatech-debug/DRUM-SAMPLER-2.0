@@ -12,7 +12,7 @@ void MIDIPlayer::prepare(double sr)
 
 void MIDIPlayer::processBlock(juce::MidiBuffer& midiMessages, int numSamples)
 {
-    if (!playing || currentGroove == nullptr || sequence.getNumEvents() == 0)
+    if (!playing || sequence.getNumEvents() == 0)
         return;
     
     double samplesPerBeat = (60.0 / currentTempo) * sampleRate;
@@ -70,6 +70,15 @@ void MIDIPlayer::loadGroove(const GrooveMetadata* groove)
     }
 }
 
+void MIDIPlayer::loadSequence(const juce::MidiMessageSequence& midiSequence, double sourceTempoBpm)
+{
+    stop();
+    currentGroove = nullptr;
+    sequence = midiSequence;
+    currentTempo = juce::jlimit(30.0, 300.0, sourceTempoBpm);
+    updatePlaybackRate();
+}
+
 void MIDIPlayer::play()
 {
     playing = true;
@@ -122,5 +131,7 @@ void MIDIPlayer::updatePlaybackRate()
     if (currentGroove != nullptr && currentGroove->tempoBPM > 0)
     {
         playbackRate = currentTempo / currentGroove->tempoBPM;
+        return;
     }
+    playbackRate = 1.0;
 }

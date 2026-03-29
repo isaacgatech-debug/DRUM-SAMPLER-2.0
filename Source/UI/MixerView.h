@@ -4,21 +4,22 @@
 #include <memory>
 #include "ChannelStrip.h"
 #include "PluginColors.h"
+#include "../Core/MicBusLayout.h"
 
 class DrumTechProcessor;
 
 /**
  * Spacious analog console mixer.
- * 80px left labels sidebar (INPUT/EQ/SENDS/S·M/VU/FADER/PAN),
- * Viewport with horizontal scroll for 12 channel strips,
- * 100px master strip pinned right, 2px separator.
+ * 96px left labels sidebar (INPUT/EQ/SENDS/S·M/VU/FADER/PAN),
+ * Viewport with horizontal scroll for mic stem channel strips,
+ * 128px master strip pinned right, 2px separator.
  */
 class MixerView : public juce::Component, private juce::Timer
 {
 public:
-    static constexpr int numChannels  = 12;
-    static constexpr int sidebarW    = 80;
-    static constexpr int masterW     = 104;
+    static constexpr int numChannels  = MicBus::count;
+    static constexpr int sidebarW    = 96;
+    static constexpr int masterW     = 128;
 
     MixerView();
     ~MixerView() override;
@@ -38,19 +39,12 @@ private:
 
     std::array<std::unique_ptr<ChannelStrip>, numChannels> channelStrips;
 
-    // Channel name mapping to match handoff
-    const std::array<juce::String, numChannels> channelNames = {
-        "Kick In", "Kick Out", "Snare Top", "Snare Bot",
-        "Hi-Hat", "Tom 1", "Tom 2", "Tom 3",
-        "OVH L", "OVH R", "Room L", "Room R"
-    };
-
     // Container component that holds all strips (lives inside viewport)
     struct StripsContainer : public juce::Component
     {
         void paint(juce::Graphics& g) override
         {
-            g.fillAll(juce::Colour(PluginColors::pluginBg));
+            g.fillAll(juce::Colour(PluginColors::pluginBg).withAlpha(0.78f));
         }
     };
 

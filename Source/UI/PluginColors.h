@@ -2,30 +2,29 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 /**
- * PluginColors — Drum Tech design token system
- * All juce::Colour constants for the plugin UI.
- * Replace all orange (0xFFE8A020) usage with these tokens.
+ * PluginColors — Drum Tech “console” palette (Pro Tools–inspired).
+ * Warm neutrals, amber highlight, muted track colours — not neon / sci‑fi.
  */
 namespace PluginColors
 {
-    // Backgrounds
-    inline constexpr juce::uint32 pluginBg        = 0xFF0D0D0E;
-    inline constexpr juce::uint32 pluginPanel      = 0xFF141416;
-    inline constexpr juce::uint32 pluginSurface    = 0xFF1C1C1F;
-    inline constexpr juce::uint32 pluginSurfaceHi  = 0xFF242428;
+    // Backgrounds (raised / recessed gray, similar to classic DAW mix windows)
+    inline constexpr juce::uint32 pluginBg        = 0xFF2C2C2C;
+    inline constexpr juce::uint32 pluginPanel      = 0xFF383838;
+    inline constexpr juce::uint32 pluginSurface    = 0xFF404040;
+    inline constexpr juce::uint32 pluginSurfaceHi  = 0xFF4A4A4A;
 
-    // Borders
-    inline constexpr juce::uint32 pluginBorder     = 0xFF2C2C32;
-    inline constexpr juce::uint32 pluginBorderHi   = 0xFF3C3C44;
+    // Borders (dark inset + soft highlight)
+    inline constexpr juce::uint32 pluginBorder     = 0xFF1A1A1A;
+    inline constexpr juce::uint32 pluginBorderHi   = 0xFF5C5C5C;
 
-    // Accent — cyan replaces all orange
-    inline constexpr juce::uint32 accent           = 0xFF00C8FF;
-    inline constexpr juce::uint32 accentDim        = 0xFF0088CC;
+    // Accent — amber / gold (selection, value, transport emphasis)
+    inline constexpr juce::uint32 accent           = 0xFFD4A74A;
+    inline constexpr juce::uint32 accentDim        = 0xFF9A7A35;
 
     // Text
-    inline constexpr juce::uint32 textPrimary      = 0xFFDDE1E7;
-    inline constexpr juce::uint32 textMuted        = 0xFF6B7280;
-    inline constexpr juce::uint32 textDim          = 0xFF3A3A44;
+    inline constexpr juce::uint32 textPrimary      = 0xFFEAEAEA;
+    inline constexpr juce::uint32 textMuted        = 0xFF9A9A9A;
+    inline constexpr juce::uint32 textDim          = 0xFF5C5C5C;
 
     // VU Meter segments
     inline constexpr juce::uint32 meterGreen       = 0xFF22C55E;
@@ -36,29 +35,23 @@ namespace PluginColors
     inline constexpr juce::uint32 soloActive       = 0xFFEAB308;   // yellow
     inline constexpr juce::uint32 muteActive       = 0xFFEF4444;   // red
 
-    // MIDI Groove block colors (by type)
-    inline constexpr juce::uint32 grooveVerse      = 0xFF0EA5E9;
-    inline constexpr juce::uint32 grooveFill       = 0xFFF97316;
-    inline constexpr juce::uint32 grooveChorus     = 0xFFA855F7;
-    inline constexpr juce::uint32 groovePreChorus  = 0xFF22C55E;
-    inline constexpr juce::uint32 grooveBridge     = 0xFFEC4899;
+    // Groove regions — muted, ink-like (readable on dark gray)
+    inline constexpr juce::uint32 grooveVerse      = 0xFF6B8A9E;
+    inline constexpr juce::uint32 grooveFill       = 0xFFB87A5C;
+    inline constexpr juce::uint32 grooveChorus     = 0xFF8B7E9E;
+    inline constexpr juce::uint32 groovePreChorus  = 0xFF6E9B7A;
+    inline constexpr juce::uint32 grooveBridge     = 0xFF9B7A8A;
 
-    // Channel strip colors (index 0-11 + master)
+    // Channel IDs — desaturated “track colour” pastels (console-style)
     inline const juce::Colour channelColors[12] = {
-        juce::Colour(0xFFEF4444),  // 0  Kick In
-        juce::Colour(0xFFF97316),  // 1  Kick Out
-        juce::Colour(0xFFEAB308),  // 2  Snare Top
-        juce::Colour(0xFF84CC16),  // 3  Snare Bot
-        juce::Colour(0xFF22C55E),  // 4  Hi-Hat
-        juce::Colour(0xFF06B6D4),  // 5  Tom 1
-        juce::Colour(0xFF3B82F6),  // 6  Tom 2
-        juce::Colour(0xFF6366F1),  // 7  Tom 3
-        juce::Colour(0xFF8B5CF6),  // 8  OVH L
-        juce::Colour(0xFFA855F7),  // 9  OVH R
-        juce::Colour(0xFFEC4899),  // 10 Room L
-        juce::Colour(0xFFEC4899),  // 11 Room R
+        juce::Colour(0xFFB0706A), juce::Colour(0xFFB8885E),
+        juce::Colour(0xFFC4A86A), juce::Colour(0xFF9BA86E),
+        juce::Colour(0xFF7AA882), juce::Colour(0xFF6A9A9A),
+        juce::Colour(0xFF6E8AB0), juce::Colour(0xFF7A82B0),
+        juce::Colour(0xFF8A86A8), juce::Colour(0xFF9888A0),
+        juce::Colour(0xFFA08898), juce::Colour(0xFFA09090),
     };
-    inline const juce::Colour masterColor = juce::Colour(0xFF00C8FF);
+    inline const juce::Colour masterColor = juce::Colour(0xFFC9A24A);
 
     // Groove type -> color
     inline juce::Colour grooveColor(int type)
@@ -102,17 +95,26 @@ namespace PluginColors
 
 } // namespace PluginColors
 
+/** Layout tokens shared across instrument panel and look-and-feel. */
+namespace UIDesign
+{
+    inline constexpr int instrumentRowH           = 32;
+    inline constexpr int instrumentSliderHeight   = 36;
+    inline constexpr int linearSliderThumbRadius  = 15;
+    inline constexpr float linearSliderTrackMax   = 11.0f;
+}
+
 /**
  * Monospace font helper for all numeric readouts.
  */
 namespace PluginFonts
 {
-    inline juce::Font mono(float size = 11.0f)
+    inline juce::Font mono(float size = 13.5f)
     {
         return juce::Font(juce::Font::getDefaultMonospacedFontName(), size, juce::Font::plain);
     }
 
-    inline juce::Font label(float size = 10.0f)
+    inline juce::Font label(float size = 12.5f)
     {
         return juce::Font(juce::FontOptions(size, juce::Font::bold));
     }

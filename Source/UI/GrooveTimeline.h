@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_audio_basics/juce_audio_basics.h>
 #include <vector>
 #include "PluginColors.h"
 
@@ -7,11 +8,12 @@
  * Persistent MIDI roll timeline — always visible below all tabs.
  *
  * Layout (top to bottom):
- *   28px  Track bar   [Track v][Block v] Track 1 [+]  [sel][cut][+][-]
- *   16px  Bar ruler   1  2  3  4  5 ...
- *   90px  Roll area   Coloured draggable groove blocks
+ *   34px  Track bar   [Track][Block][+] <track name label> [In][Out][CUT][SEL]
+ *   22px  Bar ruler   1  2  3  4  5 ...
+ *   108px Roll area   Coloured draggable groove blocks
  */
-class GrooveTimeline : public juce::Component
+class GrooveTimeline : public juce::Component,
+                        public juce::SettableTooltipClient
 {
 public:
     struct GrooveBlock
@@ -29,15 +31,18 @@ public:
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp  (const juce::MouseEvent& e) override;
+    void mouseMove(const juce::MouseEvent& e) override;
+    void mouseExit(const juce::MouseEvent& e) override;
 
     void addBlock(const GrooveBlock& block);
     void clearBlocks();
     const std::vector<GrooveBlock>& getBlocks() const { return blocks; }
+    juce::MidiMessageSequence buildSequenceForGrid() const;
 
-    static constexpr int barWidth     = 64;  // px per bar
-    static constexpr int trackBarH    = 28;
-    static constexpr int rulerH       = 16;
-    static constexpr int rollH        = 90;
+    static constexpr int barWidth     = 72;  // px per bar
+    static constexpr int trackBarH    = 34;
+    static constexpr int rulerH       = 22;
+    static constexpr int rollH        = 108;
 
 private:
     void drawTrackBar (juce::Graphics& g, juce::Rectangle<float> area);
@@ -49,6 +54,7 @@ private:
     int  blockAtPoint(juce::Point<int> pt) const;
     int  xToBar      (int x) const;
     int  barToX      (int bar) const;
+    void syncTrackNameLabel();
 
     std::vector<GrooveBlock> blocks;
     int selectedBlock  = -1;
@@ -64,8 +70,10 @@ private:
     juce::TextButton addTrackBtn   {"+"};
     juce::TextButton selectBtn     {"SEL"};
     juce::TextButton cutBtn        {"CUT"};
-    juce::TextButton zoomInBtn     {"+"};
-    juce::TextButton zoomOutBtn    {"-"};
+    juce::TextButton zoomInBtn     {"In"};
+    juce::TextButton zoomOutBtn    {"Out"};
+
+    juce::Label trackNameLabel;
 
     juce::Rectangle<int> rollRect;   // roll area bounds for hit-testing
 

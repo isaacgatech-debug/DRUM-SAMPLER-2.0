@@ -6,6 +6,27 @@
 #include "ThemeManager.h"
 #include <map>
 
+namespace
+{
+constexpr int kColorBarH   = 4;
+constexpr int kHeaderH     = 28;
+constexpr int kSecLabelH   = 15;
+constexpr int kInsertSlotH = 22;
+constexpr int kSendSlotH   = 19;
+constexpr int kIORowH      = 21;
+constexpr int kGroupRowH   = 24;
+constexpr int kSectionGap  = 3;
+
+constexpr int paintedTopBeforeControls()
+{
+    return kColorBarH + kHeaderH
+         + kSecLabelH + kInsertSlotH * 4 + kSectionGap
+         + kSecLabelH + kSendSlotH * 4 + kSectionGap
+         + kIORowH + kIORowH + kSectionGap
+         + kGroupRowH + kSectionGap;
+}
+} // namespace
+
 ChannelStrip::ChannelStrip(int channelIndex, const juce::String& channelName)
     : index(channelIndex), name(channelName)
 {
@@ -55,6 +76,7 @@ ChannelStrip::ChannelStrip(int channelIndex, const juce::String& channelName)
     fader.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     fader.setColour(juce::Slider::thumbColourId,      juce::Colour(PluginColors::textPrimary));
     fader.setColour(juce::Slider::trackColourId,      juce::Colour(PluginColors::pluginBorder));
+    fader.getProperties().set("drumtechConsoleFader", true);
     fader.setColour(juce::Slider::backgroundColourId, juce::Colour(PluginColors::pluginBg));
     fader.onValueChange = [this]
     {
@@ -68,7 +90,7 @@ ChannelStrip::ChannelStrip(int channelIndex, const juce::String& channelName)
 
     // dB readout
     dbReadout.setText("-2.0", juce::dontSendNotification);
-    dbReadout.setFont(PluginFonts::mono(9.0f));
+    dbReadout.setFont(PluginFonts::mono(11.0f));
     dbReadout.setColour(juce::Label::textColourId, juce::Colour(PluginColors::textPrimary));
     dbReadout.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(dbReadout);
@@ -90,38 +112,38 @@ void ChannelStrip::paint(juce::Graphics& g)
 
     auto row = b;
 
-    // 3px color bar + glow
-    drawColorBar(g, row.removeFromTop(3.0f));
+    // Color bar + glow
+    drawColorBar(g, row.removeFromTop(static_cast<float>(kColorBarH)));
 
-    // 24px header
-    drawHeader(g, row.removeFromTop(24.0f));
+    // Header
+    drawHeader(g, row.removeFromTop(static_cast<float>(kHeaderH)));
 
     // ── INSERTS ──
-    drawSectionLabel(g, row.removeFromTop(13.0f), "INSERTS");
+    drawSectionLabel(g, row.removeFromTop(static_cast<float>(kSecLabelH)), "INSERTS");
     for (int i = 0; i < 4; ++i)
     {
-        auto slotR = row.removeFromTop(18.0f);
+        auto slotR = row.removeFromTop(static_cast<float>(kInsertSlotH));
         bool isEQ = (i == 0);
         if (isEQ) eqSlotRect = slotR.toNearestInt();
         insertSlotRects[static_cast<size_t>(i)] = slotR.toNearestInt();
         drawInsertSlot(g, slotR, i, isEQ);
     }
-    row.removeFromTop(2.0f);
+    row.removeFromTop(static_cast<float>(kSectionGap));
 
     // ── SENDS ──
-    drawSectionLabel(g, row.removeFromTop(13.0f), "SENDS");
+    drawSectionLabel(g, row.removeFromTop(static_cast<float>(kSecLabelH)), "SENDS");
     for (int i = 0; i < 4; ++i)
-        drawSendSlot(g, row.removeFromTop(16.0f), i);
-    row.removeFromTop(2.0f);
+        drawSendSlot(g, row.removeFromTop(static_cast<float>(kSendSlotH)), i);
+    row.removeFromTop(static_cast<float>(kSectionGap));
 
     // ── I/O ──
-    drawIORow(g, row.removeFromTop(18.0f), "IN", "Main In");
-    drawIORow(g, row.removeFromTop(18.0f), "OUT", "Main Out");
-    row.removeFromTop(2.0f);
+    drawIORow(g, row.removeFromTop(static_cast<float>(kIORowH)), "IN", "Main In");
+    drawIORow(g, row.removeFromTop(static_cast<float>(kIORowH)), "OUT", "Main Out");
+    row.removeFromTop(static_cast<float>(kSectionGap));
 
     // ── GROUPS ──
-    drawGroupRow(g, row.removeFromTop(20.0f));
-    row.removeFromTop(2.0f);
+    drawGroupRow(g, row.removeFromTop(static_cast<float>(kGroupRowH)));
+    row.removeFromTop(static_cast<float>(kSectionGap));
 
     // Pan / fader / VU / mute-solo are child components — painted by JUCE
 }
@@ -144,13 +166,13 @@ void ChannelStrip::drawHeader(juce::Graphics& g, juce::Rectangle<float> r)
     g.fillRect(r);
 
     // Channel number (small, top-left)
-    g.setFont(PluginFonts::mono(7.5f));
+    g.setFont(PluginFonts::mono(9.0f));
     g.setColour(tm.muted());
-    g.drawText(juce::String(index + 1), r.reduced(3, 1).removeFromTop(10),
+    g.drawText(juce::String(index + 1), r.reduced(4, 2).removeFromTop(12),
                juce::Justification::topLeft, false);
 
     // Channel name (centred)
-    g.setFont(PluginFonts::label(9.0f));
+    g.setFont(PluginFonts::label(11.0f));
     g.setColour(tm.text());
     g.drawText(shortName, r, juce::Justification::centred, false);
 }
@@ -161,9 +183,9 @@ void ChannelStrip::drawSectionLabel(juce::Graphics& g, juce::Rectangle<float> r,
     auto& tm = ThemeManager::get();
     g.setColour(tm.panel().darker(0.05f));
     g.fillRect(r);
-    g.setFont(PluginFonts::mono(7.5f));
+    g.setFont(PluginFonts::mono(9.0f));
     g.setColour(tm.dim());
-    g.drawText(label, r.reduced(4.0f, 0.0f), juce::Justification::centredLeft, false);
+    g.drawText(label, r.reduced(5.0f, 1.0f), juce::Justification::centredLeft, false);
     g.setColour(tm.border());
     g.drawHorizontalLine((int)r.getBottom() - 1, r.getX(), r.getRight());
 }
@@ -186,14 +208,14 @@ void ChannelStrip::drawInsertSlot(juce::Graphics& g, juce::Rectangle<float> r,
         g.fillRect(r.reduced(1.0f, 0.5f));
     }
 
-    g.setFont(PluginFonts::mono(8.5f));
+    g.setFont(PluginFonts::mono(10.0f));
     g.setColour(isEQ ? juce::Colour(PluginColors::accent) : tm.muted());
-    g.drawText(insertNames[idx], r.reduced(4.0f, 0.0f),
+    g.drawText(insertNames[idx], r.reduced(5.0f, 1.0f),
                juce::Justification::centredLeft, false);
 
     if (isEQ)
     {
-        g.setFont(PluginFonts::mono(7.0f));
+        g.setFont(PluginFonts::mono(8.5f));
         g.setColour(tm.muted());
         g.drawText("dbl-click", r, juce::Justification::centredRight, false);
     }
@@ -207,9 +229,9 @@ void ChannelStrip::drawSendSlot(juce::Graphics& g, juce::Rectangle<float> r, int
     g.setColour(tm.border().withAlpha(0.4f));
     g.drawRect(r.reduced(1.0f, 0.5f), 0.5f);
 
-    g.setFont(PluginFonts::mono(8.0f));
+    g.setFont(PluginFonts::mono(9.5f));
     g.setColour(tm.muted());
-    g.drawText(sendNames[idx], r.reduced(4.0f, 0.0f),
+    g.drawText(sendNames[idx], r.reduced(5.0f, 1.0f),
                juce::Justification::centredLeft, false);
 
     if (sendNames[idx] != "—")
@@ -229,12 +251,12 @@ void ChannelStrip::drawIORow(juce::Graphics& g, juce::Rectangle<float> r,
     g.setColour(tm.border().withAlpha(0.3f));
     g.drawHorizontalLine((int)r.getBottom() - 1, r.getX(), r.getRight());
 
-    g.setFont(PluginFonts::mono(8.0f));
+    g.setFont(PluginFonts::mono(9.5f));
     g.setColour(tm.dim());
-    g.drawText(label + ":", r.reduced(4.0f, 1.0f).removeFromLeft(20.0f),
+    g.drawText(label + ":", r.reduced(5.0f, 2.0f).removeFromLeft(24.0f),
                juce::Justification::centredLeft, false);
     g.setColour(tm.muted());
-    g.drawText(value, r.reduced(26.0f, 1.0f), juce::Justification::centredLeft, true);
+    g.drawText(value, r.reduced(30.0f, 2.0f), juce::Justification::centredLeft, true);
 }
 
 void ChannelStrip::drawGroupRow(juce::Graphics& g, juce::Rectangle<float> r)
@@ -243,16 +265,16 @@ void ChannelStrip::drawGroupRow(juce::Graphics& g, juce::Rectangle<float> r)
     g.setColour(tm.bg());
     g.fillRect(r);
 
-    g.setFont(PluginFonts::mono(7.5f));
+    g.setFont(PluginFonts::mono(9.0f));
     g.setColour(tm.dim());
-    g.drawText("GRP", r.reduced(3.0f, 2.0f).removeFromLeft(26.0f),
+    g.drawText("GRP", r.reduced(4.0f, 3.0f).removeFromLeft(30.0f),
                juce::Justification::centredLeft, false);
 
     // A, B, C group buttons (drawn)
-    float btnW = 18.0f;
-    float btnY = r.getY() + 2.0f;
-    float btnH = r.getHeight() - 4.0f;
-    float startX = r.getX() + 30.0f;
+    float btnW = 22.0f;
+    float btnY = r.getY() + 3.0f;
+    float btnH = r.getHeight() - 6.0f;
+    float startX = r.getX() + 36.0f;
     const char* grps[] = {"A", "B", "C"};
     for (int i = 0; i < 3; ++i)
     {
@@ -261,7 +283,7 @@ void ChannelStrip::drawGroupRow(juce::Graphics& g, juce::Rectangle<float> r)
         g.fillRoundedRectangle(btn, 2.0f);
         g.setColour(tm.border());
         g.drawRoundedRectangle(btn, 2.0f, 0.5f);
-        g.setFont(PluginFonts::mono(8.0f));
+        g.setFont(PluginFonts::mono(10.0f));
         g.setColour(tm.muted());
         g.drawText(grps[i], btn, juce::Justification::centred, false);
     }
@@ -272,28 +294,26 @@ void ChannelStrip::resized()
 {
     auto area = getLocalBounds();
 
-    // Skip the painted sections
-    int paintedTop = 3 + 24 + 13 + (18 * 4) + 2 + 13 + (16 * 4) + 2 + 18 + 18 + 2 + 20 + 2;
-    area.removeFromTop(paintedTop);
+    area.removeFromTop(paintedTopBeforeControls());
 
-    // Pan knob (44px square)
-    panKnob.setBounds(area.removeFromTop(44).reduced(12, 2));
+    // Pan knob
+    panKnob.setBounds(area.removeFromTop(54).reduced(14, 3));
 
     // Remaining: fader + VU side-by-side, then dB, then mute/solo
-    int bottomH = 14 + 26; // dB + S/M
+    int bottomH = 18 + 32; // dB + S/M
     auto middleArea = area.removeFromTop(area.getHeight() - bottomH);
 
-    // VU on the left (14px), fader fills rest
-    vuRect = middleArea.removeFromLeft(14);
+    // VU on the left, fader fills rest
+    vuRect = middleArea.removeFromLeft(20);
     vuMeter.setBounds(vuRect);
-    faderRect = middleArea.reduced(8, 2);
+    faderRect = middleArea.reduced(9, 3);
     fader.setBounds(faderRect);
 
     // dB readout
-    dbReadout.setBounds(area.removeFromTop(14));
+    dbReadout.setBounds(area.removeFromTop(18));
 
     // Mute / Solo
-    auto smRow = area.removeFromTop(26);
+    auto smRow = area.removeFromTop(32);
     int smW = smRow.getWidth() / 2;
     soloBtn.setBounds(smRow.removeFromLeft(smW).reduced(1));
     muteBtn.setBounds(smRow.reduced(1));
@@ -331,9 +351,14 @@ void ChannelStrip::mouseDoubleClick(const juce::MouseEvent& e)
 
 void ChannelStrip::openEQWindow()
 {
-    if (!eqWindow)
-        eqWindow = std::make_unique<ParametricEQWindow>(name);
+    if (processor == nullptr)
+        return;
 
+    if (!eqWindow)
+        eqWindow = std::make_unique<ParametricEQWindow>(processor, index, name);
+
+    eqWindow->getEditor().setProcessorTarget(processor, index);
+    eqWindow->getEditor().pullFromApvts();
     eqWindow->setVisible(true);
     eqWindow->toFront(true);
 }
