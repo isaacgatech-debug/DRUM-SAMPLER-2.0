@@ -83,10 +83,16 @@ DrumKitView::DrumKitView()
     addAndMakeVisible(settingsPanel);
     addAndMakeVisible(kickBeater);
 
-    addAndMakeVisible(kitBuilderBtn);
-    addAndMakeVisible(homeBtn);
-    addAndMakeVisible(triggerBtn);
-    addAndMakeVisible(mixerBtn);
+    // Legacy navigation buttons - hidden (using new top bar icons instead)
+    addChildComponent(kitBuilderBtn);
+    addChildComponent(homeBtn);
+    addChildComponent(triggerBtn);
+    addChildComponent(mixerBtn);
+    
+    kitBuilderBtn.setVisible(false);
+    homeBtn.setVisible(false);
+    triggerBtn.setVisible(false);
+    mixerBtn.setVisible(false);
 
     kitBuilderBtn.onPressed = [this] { setKitBuilderMode(true); };
     homeBtn.onPressed = [this]
@@ -106,10 +112,8 @@ DrumKitView::DrumKitView()
 //==============================================================================
 void DrumKitView::paint(juce::Graphics& g)
 {
-    auto kitArea = getLocalBounds()
-                       .withTrimmedRight(kitBuilderMode ? settingsPanelW : 0)
-                       // .withTrimmedBottom(pianoH)  // piano disabled
-                       .toFloat();
+    // Use full area for backdrop - settings panel overlays on top
+    auto kitArea = getLocalBounds().toFloat();
 
     if (backdropImage.isValid())
     {
@@ -135,22 +139,18 @@ void DrumKitView::resized()
     auto fullArea = getLocalBounds();
     auto area = fullArea;
 
-    // Settings panel (right)
-    if (kitBuilderMode)
-    {
-        settingsPanel.setVisible(true);
-        settingsPanel.setBounds(area.removeFromRight(settingsPanelW));
-    }
-    else
-    {
-        settingsPanel.setVisible(false);
-        settingsPanel.setBounds(0, 0, 0, 0);
-    }
+    // Settings panel (right) - slides in as overlay based on animation amount
+    const int panelX = fullArea.getWidth() - static_cast<int>(kitBuilderSlideAmount * static_cast<float>(settingsPanelW));
+    settingsPanel.setBounds(panelX, 0, settingsPanelW, fullArea.getHeight());
+    settingsPanel.setVisible(kitBuilderSlideAmount > 0.001f);
+    if (settingsPanel.isVisible())
+        settingsPanel.toFront(false);
 
     // Piano keyboard disabled for build
     // pianoPanel.setBounds(area.removeFromBottom(pianoH));
 
-    int w = area.getWidth();
+    // Use full area for drum kit (don't trim for settings panel)
+    int w = fullArea.getWidth();
     int h = area.getHeight();
 
     // Crash 1 (upper-left)

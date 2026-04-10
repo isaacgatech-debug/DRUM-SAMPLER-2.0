@@ -17,6 +17,9 @@ public:
 
     void setKitBuilderMode(bool shouldShow) { kitBuilderMode = shouldShow; resized(); repaint(); }
     bool isKitBuilderMode() const noexcept { return kitBuilderMode; }
+    
+    void setKitBuilderSlideAmount(float amount) { kitBuilderSlideAmount = amount; resized(); }
+    float getKitBuilderSlideAmount() const noexcept { return kitBuilderSlideAmount; }
 
     std::function<void()> onMixerPressed;
     std::function<void()> onHomePressed;
@@ -332,6 +335,7 @@ private:
     DrumTechProcessor* processor = nullptr;
     juce::Image backdropImage;
     bool kitBuilderMode = false;
+    float kitBuilderSlideAmount = 0.0f;
 
     AnimatedNavButton kitBuilderBtn { "KIT BUILDER", AnimatedNavButton::Orientation::Horizontal };
     AnimatedNavButton homeBtn       { "HOME",        AnimatedNavButton::Orientation::Horizontal };

@@ -8,6 +8,7 @@
 #include "../UI/GrooveBrowser.h"
 #include "../UI/GrooveTimeline.h"
 #include "../UI/SettingsView.h"
+#include "../UI/TriggerView.h"
 #include "../UI/TransportBar.h"
 #include "../UI/PluginColors.h"
 #include "../UI/DrumTechLookAndFeel.h"
@@ -49,12 +50,24 @@ public:
                 processor.getAPVTS().getParameter("samplerPlayingStyle")))
             settingsView.setPlayingStyleIndex(p->getIndex());
 
-        const float delta = mixerSlideTarget - mixerSlideAmount;
-        if (std::abs(delta) > 0.001f)
+        // Animate mixer slide
+        const float mixerDelta = mixerSlideTarget - mixerSlideAmount;
+        if (std::abs(mixerDelta) > 0.001f)
         {
-            mixerSlideAmount += delta * 0.2f;
+            mixerSlideAmount += mixerDelta * 0.2f;
             if (std::abs(mixerSlideTarget - mixerSlideAmount) < 0.005f)
                 mixerSlideAmount = mixerSlideTarget;
+            resized();
+        }
+        
+        // Animate kit builder slide
+        const float kitBuilderDelta = kitBuilderSlideTarget - kitBuilderSlideAmount;
+        if (std::abs(kitBuilderDelta) > 0.001f)
+        {
+            kitBuilderSlideAmount += kitBuilderDelta * 0.2f;
+            if (std::abs(kitBuilderSlideTarget - kitBuilderSlideAmount) < 0.005f)
+                kitBuilderSlideAmount = kitBuilderSlideTarget;
+            kitView.setKitBuilderSlideAmount(kitBuilderSlideAmount);
             resized();
         }
     }
@@ -82,11 +95,18 @@ private:
     DrumTechProcessor& processor;
 
     juce::Image logoImage;
+    juce::Image homeIconImg;
+    juce::Image kitBuilderIconImg;
+    juce::Image mixerIconImg;
+    juce::Image triggerIconImg;
+    juce::Image settingsIconImg;
 
-    // Tab buttons
-    juce::TextButton tabKit    {"HOME"};
-    juce::TextButton tabMixer  {"MIXER"};
-    juce::TextButton tabSettings{"SETTINGS"};
+    // Tab buttons (icon-only, no text)
+    juce::TextButton tabHome       {""};
+    juce::TextButton tabKitBuilder {""};
+    juce::TextButton tabMixer      {""};
+    juce::TextButton tabTrigger    {""};
+    juce::TextButton tabSettings   {""};
 
     // Top-right controls
     juce::TextButton kitSelectorBtn{"Kit: Default"};
@@ -99,6 +119,7 @@ private:
     MixerView     mixerView;
     MixerDismissLayer mixerDismissLayer;
     SettingsView  settingsView;
+    TriggerView   triggerView;
 
     // Bottom persistent bar
     GrooveTimeline grooveTimeline;
@@ -113,6 +134,8 @@ private:
     juce::String currentKitName{"Default Kit"};
     float        mixerSlideAmount = 0.0f;
     float        mixerSlideTarget = 0.0f;
+    float        kitBuilderSlideAmount = 0.0f;
+    float        kitBuilderSlideTarget = 0.0f;
 
     static constexpr int topNavH       = 54;
     static constexpr int instrBarH     = 44;

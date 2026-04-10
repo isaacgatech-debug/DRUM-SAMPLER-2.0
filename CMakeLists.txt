@@ -54,6 +54,11 @@ juce_add_binary_data(DrumTechResources
         "Resources/Backdrops/Drum Tech.jpg"
         "Resources/Backdrops/Drum Tech (1).jpg"
         "Resources/LOGO/Gridlock Logo - White.png"
+        "Resources/Icons/home.png"
+        "Resources/Icons/kitbuilder.png"
+        "Resources/Icons/mixer.png"
+        "Resources/Icons/trigger.png"
+        "Resources/Icons/settings.png"
 )
 
 # Source files
