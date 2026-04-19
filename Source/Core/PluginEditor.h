@@ -5,11 +5,8 @@
 #include "PluginProcessor.h"
 #include "../UI/DrumKitView.h"
 #include "../UI/MixerView.h"
-#include "../UI/GrooveBrowser.h"
-#include "../UI/GrooveTimeline.h"
-#include "../UI/SettingsView.h"
-#include "../UI/TriggerView.h"
 #include "../UI/TransportBar.h"
+#include "../Sequencer/StepSequencer.h"
 #include "../UI/PluginColors.h"
 #include "../UI/DrumTechLookAndFeel.h"
 #include "../UI/ThemeManager.h"
@@ -43,12 +40,7 @@ public:
             juce::String(static_cast<int>(player.getPosition()) + 1).paddedLeft('0', 3)
             + ":01:000");
 
-        if (auto* p = dynamic_cast<juce::AudioParameterChoice*>(
-                processor.getAPVTS().getParameter("samplerDrummerProfile")))
-            settingsView.setDrummerProfileIndex(p->getIndex());
-        if (auto* p = dynamic_cast<juce::AudioParameterChoice*>(
-                processor.getAPVTS().getParameter("samplerPlayingStyle")))
-            settingsView.setPlayingStyleIndex(p->getIndex());
+        juce::ignoreUnused(processor);
 
         // Animate mixer slide
         const float mixerDelta = mixerSlideTarget - mixerSlideAmount;
@@ -95,18 +87,18 @@ private:
     DrumTechProcessor& processor;
 
     juce::Image logoImage;
-    juce::Image homeIconImg;
-    juce::Image kitBuilderIconImg;
-    juce::Image mixerIconImg;
-    juce::Image triggerIconImg;
-    juce::Image settingsIconImg;
+    
+    // Icon drawables (must be stored as members)
+    std::unique_ptr<juce::Drawable> homeIcon;
+    std::unique_ptr<juce::Drawable> kitIcon;
+    std::unique_ptr<juce::Drawable> mixerIcon;
+    std::unique_ptr<juce::Drawable> sequencerIcon;
 
-    // Tab buttons (icon-only, no text)
-    juce::TextButton tabHome       {""};
-    juce::TextButton tabKitBuilder {""};
-    juce::TextButton tabMixer      {""};
-    juce::TextButton tabTrigger    {""};
-    juce::TextButton tabSettings   {""};
+    // Tab buttons (icon-only, using DrawableButton for SVG support)
+    juce::DrawableButton tabHome       {"tabHome", juce::DrawableButton::ImageFitted};
+    juce::DrawableButton tabKit       {"tabKit", juce::DrawableButton::ImageFitted};
+    juce::DrawableButton tabMixer     {"tabMixer", juce::DrawableButton::ImageFitted};
+    juce::DrawableButton tabSequencer {"tabSequencer", juce::DrawableButton::ImageFitted};
 
     // Top-right controls
     juce::TextButton kitSelectorBtn{"Kit: Default"};
@@ -115,14 +107,11 @@ private:
 
     // Content views
     DrumKitView   kitView;
-    GrooveBrowser grooveBrowser;
     MixerView     mixerView;
     MixerDismissLayer mixerDismissLayer;
-    SettingsView  settingsView;
-    TriggerView   triggerView;
+    StepSequencer stepSequencer;
 
-    // Bottom persistent bar
-    GrooveTimeline grooveTimeline;
+    // Transport bar
     TransportBar   transportBar;
 
     // Debug console
@@ -139,9 +128,6 @@ private:
 
     static constexpr int topNavH       = 54;
     static constexpr int instrBarH     = 44;
-    static constexpr int midiRollH     = GrooveTimeline::trackBarH
-                                       + GrooveTimeline::rulerH
-                                       + GrooveTimeline::rollH;
     static constexpr int transportBarH = 56;
 
     DrumTechLookAndFeel appLookAndFeel;

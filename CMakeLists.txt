@@ -54,11 +54,12 @@ juce_add_binary_data(DrumTechResources
         "Resources/Backdrops/Drum Tech.jpg"
         "Resources/Backdrops/Drum Tech (1).jpg"
         "Resources/LOGO/Gridlock Logo - White.png"
-        "Resources/Icons/home.png"
-        "Resources/Icons/kitbuilder.png"
-        "Resources/Icons/mixer.png"
-        "Resources/Icons/trigger.png"
-        "Resources/Icons/settings.png"
+        "Resources/Icons/home_simple.svg"
+        "Resources/Icons/kit_simple.svg"
+        "Resources/Icons/mixer_simple.svg"
+        "Resources/Icons/sequencer.svg"
+        "Resources/Icons/play.svg"
+        "Resources/Icons/stop.svg"
 )
 
 # Source files
@@ -107,6 +108,9 @@ target_sources(DrumTech PRIVATE
     Source/Grooves/GrooveTimeline.cpp
     Source/Grooves/RhythmMatcher.cpp
     Source/Grooves/MIDIPlayer.cpp
+    
+    # Sequencer
+    Source/Sequencer/StepSequencer.cpp
     
     # Trigger
     Source/Trigger/AudioTriggerEngine.cpp

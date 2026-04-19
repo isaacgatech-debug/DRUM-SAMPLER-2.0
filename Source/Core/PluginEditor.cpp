@@ -27,12 +27,16 @@ DrumTechEditor::DrumTechEditor(DrumTechProcessor& p)
         if (f.existsAsFile()) { logoImage = juce::ImageFileFormat::loadFrom(f); break; }
 #endif
 
-    // Load icon images from binary data
-    homeIconImg = juce::ImageFileFormat::loadFrom(BinaryData::home_png, BinaryData::home_pngSize);
-    kitBuilderIconImg = juce::ImageFileFormat::loadFrom(BinaryData::kitbuilder_png, BinaryData::kitbuilder_pngSize);
-    mixerIconImg = juce::ImageFileFormat::loadFrom(BinaryData::mixer_png, BinaryData::mixer_pngSize);
-    triggerIconImg = juce::ImageFileFormat::loadFrom(BinaryData::trigger_png, BinaryData::trigger_pngSize);
-    settingsIconImg = juce::ImageFileFormat::loadFrom(BinaryData::settings_png, BinaryData::settings_pngSize);
+    // Load SVG icons from binary data using JUCE Drawable
+    auto loadSVG = [](const char* data, int size) -> std::unique_ptr<juce::Drawable> {
+        if (data == nullptr || size <= 0) return nullptr;
+        return juce::Drawable::createFromImageData(data, size);
+    };
+    
+    homeIcon = loadSVG(BinaryData::home_simple_svg, BinaryData::home_simple_svgSize);
+    kitIcon = loadSVG(BinaryData::kit_simple_svg, BinaryData::kit_simple_svgSize);
+    mixerIcon = loadSVG(BinaryData::mixer_simple_svg, BinaryData::mixer_simple_svgSize);
+    sequencerIcon = loadSVG(BinaryData::sequencer_svg, BinaryData::sequencer_svgSize);
 
     // Theme toggle button
     auto& tm = ThemeManager::get();
@@ -53,21 +57,22 @@ DrumTechEditor::DrumTechEditor(DrumTechProcessor& p)
     };
     addAndMakeVisible(themeModeBtn);
 
-    // Tab buttons - icon-only, transparent backgrounds
-    auto styleTab = [](juce::TextButton& btn, int tabIdx, std::function<void(int)> switchFn)
+    // Tab buttons - icon-only using DrawableButton
+    auto setupIconButton = [this](juce::DrawableButton& btn, juce::Drawable* icon, int tabIdx)
     {
-        btn.setColour(juce::TextButton::buttonColourId,  juce::Colours::transparentBlack);
-        btn.setColour(juce::TextButton::textColourOffId, juce::Colours::transparentBlack);
-        btn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::transparentBlack);
-        btn.onClick = [tabIdx, switchFn] { switchFn(tabIdx); };
+        if (icon)
+        {
+            // Set same icon for normal, over, down, disabled states
+            btn.setImages(icon, icon, icon, nullptr);
+        }
+        btn.setClickingTogglesState(false);
+        btn.onClick = [this, tabIdx] { switchTab(tabIdx); };
     };
 
-    auto switchFn = [this](int t) { switchTab(t); };
-    styleTab(tabHome,       0, switchFn); addAndMakeVisible(tabHome);
-    styleTab(tabKitBuilder, 1, switchFn); addAndMakeVisible(tabKitBuilder);
-    styleTab(tabMixer,      2, switchFn); addAndMakeVisible(tabMixer);
-    styleTab(tabTrigger,    3, switchFn); addAndMakeVisible(tabTrigger);
-    styleTab(tabSettings,   4, switchFn); addAndMakeVisible(tabSettings);
+    setupIconButton(tabHome, homeIcon.get(), 0); addAndMakeVisible(tabHome);
+    setupIconButton(tabKit, kitIcon.get(), 1); addAndMakeVisible(tabKit);
+    setupIconButton(tabMixer, mixerIcon.get(), 2); addAndMakeVisible(tabMixer);
+    setupIconButton(tabSequencer, sequencerIcon.get(), 3); addAndMakeVisible(tabSequencer);
 
     // Kit selector (shows popup menu instead of combo)
     kitSelectorBtn.setColour(juce::TextButton::buttonColourId,  juce::Colour(PluginColors::pluginSurface));
@@ -84,7 +89,7 @@ DrumTechEditor::DrumTechEditor(DrumTechProcessor& p)
         kitLockBtn.setColour(juce::TextButton::textColourOffId,
                              kitLocked ? juce::Colour(PluginColors::accent)
                                        : juce::Colour(PluginColors::textMuted));
-        settingsView.setImportStatus(kitLocked ? "kit locked" : "kit unlocked");
+        juce::ignoreUnused(kitLocked);
     };
     addAndMakeVisible(kitLockBtn);
 
@@ -101,62 +106,24 @@ DrumTechEditor::DrumTechEditor(DrumTechProcessor& p)
     };
     mixerView.setProcessor(&processor);
     mixerView.setAlpha(0.86f);
-    grooveBrowser.setGrooveLibrary(&processor.getGrooveLibrary());
-    grooveBrowser.setMIDIPlayer(&processor.getMIDIPlayer());
-    grooveBrowser.onAddToTimeline = [this](const GrooveMetadata& groove)
-    {
-        GrooveTimeline::GrooveBlock block;
-        block.name = groove.name;
-        block.durationBars = juce::jmax(1, groove.lengthInBeats / 4);
-        block.type = 0;
-        block.startBar = grooveTimeline.getBlocks().empty()
-            ? 1
-            : grooveTimeline.getBlocks().back().startBar + grooveTimeline.getBlocks().back().durationBars;
-        grooveTimeline.addBlock(block);
-    };
     addAndMakeVisible(kitView);
     addAndMakeVisible(mixerDismissLayer);
     addAndMakeVisible(mixerView);
-    addAndMakeVisible(settingsView);
-    addAndMakeVisible(triggerView);
+    addAndMakeVisible(stepSequencer);
+    
+    stepSequencer.setProcessor(&processor);
 
     mixerDismissLayer.onDismiss = [this]
     {
         mixerSlideTarget = 0.0f;
     };
 
-    settingsView.onImportFolder = [this] { showKitPopupMenu(); };
-    settingsView.onCreateKit = [this] { showKitPopupMenu(); };
-    settingsView.onDrummerProfileChanged = [this](int idx)
-    {
-        if (auto* p = dynamic_cast<juce::AudioParameterChoice*>(
-                processor.getAPVTS().getParameter("samplerDrummerProfile")))
-        {
-            const int n = juce::jmax(1, p->choices.size() - 1);
-            p->setValueNotifyingHost(static_cast<float>(juce::jlimit(0, n, idx)) / static_cast<float>(n));
-        }
-    };
-    settingsView.onPlayingStyleChanged = [this](int idx)
-    {
-        if (auto* p = dynamic_cast<juce::AudioParameterChoice*>(
-                processor.getAPVTS().getParameter("samplerPlayingStyle")))
-        {
-            const int n = juce::jmax(1, p->choices.size() - 1);
-            p->setValueNotifyingHost(static_cast<float>(juce::jlimit(0, n, idx)) / static_cast<float>(n));
-        }
-    };
-
-    // MIDI roll + transport (always visible)
-    addAndMakeVisible(grooveTimeline);
     addAndMakeVisible(transportBar);
     transportBar.onPlay = [this](bool shouldPlay)
     {
         if (shouldPlay)
         {
-            auto seq = grooveTimeline.buildSequenceForGrid();
-            if (seq.getNumEvents() > 0)
-                processor.getMIDIPlayer().loadSequence(seq, processor.getMIDIPlayer().getTempo());
-        }
+                }
         processor.setTransportPlaying(shouldPlay);
     };
     transportBar.onStop = [this] { processor.setTransportPlaying(false); };
@@ -206,16 +173,13 @@ void DrumTechEditor::applyTheme()
     themeModeBtn.setColour  (juce::TextButton::buttonColourId,  tm.surfaceHi());
     themeModeBtn.setColour  (juce::TextButton::textColourOffId, tm.accent());
 
-    settingsView.setCurrentKitName(currentKitName);
-
-    juce::ignoreUnused(bgCol, mutedCol, textCol2);
+    juce::ignoreUnused(bgCol, panelCol, textCol2, mutedCol);
 }
 
 void DrumTechEditor::showKitPopupMenu()
 {
     if (kitLocked)
     {
-        settingsView.setImportStatus("blocked: unlock kit to import/switch");
         return;
     }
 
@@ -231,9 +195,9 @@ void DrumTechEditor::showKitPopupMenu()
     menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&kitSelectorBtn),
         [this](int result)
         {
-            if (result == 1)  { currentKitName = "Default Kit"; kitSelectorBtn.setButtonText("Kit: Default"); settingsView.setCurrentKitName(currentKitName); }
-            else if (result == 2) { currentKitName = "Rock Kit";    kitSelectorBtn.setButtonText("Kit: Rock"); settingsView.setCurrentKitName(currentKitName); }
-            else if (result == 3) { currentKitName = "Jazz Kit";    kitSelectorBtn.setButtonText("Kit: Jazz"); settingsView.setCurrentKitName(currentKitName); }
+            if (result == 1)  { currentKitName = "Default Kit"; kitSelectorBtn.setButtonText("Kit: Default"); }
+            else if (result == 2) { currentKitName = "Rock Kit";    kitSelectorBtn.setButtonText("Kit: Rock"); }
+            else if (result == 3) { currentKitName = "Jazz Kit";    kitSelectorBtn.setButtonText("Kit: Jazz"); }
             else if (result == 10 || result == 11)
             {
                 // Folder import
@@ -250,13 +214,7 @@ void DrumTechEditor::showKitPopupMenu()
                             processor.loadSamplesFromFolder(folder);
                             currentKitName = folder.getFileName();
                             kitSelectorBtn.setButtonText("Kit: " + folder.getFileName());
-                            settingsView.setCurrentKitName(currentKitName);
-                            settingsView.setImportStatus("loaded " + folder.getFileName());
                             LOG_INFO("Loaded kit from folder: " + folder.getFullPathName());
-                        }
-                        else
-                        {
-                            settingsView.setImportStatus("cancelled");
                         }
                     });
             }
@@ -273,47 +231,7 @@ void DrumTechEditor::paint(juce::Graphics& g)
     g.setColour(juce::Colours::black);
     g.fillRect(0, 0, getWidth(), topBarHeight);
     
-    // Draw icons centered in the black bar
-    static constexpr int iconSize = 48;
-    if (homeIconImg.isValid())
-    {
-        auto bounds = tabHome.getBounds();
-        g.setColour(juce::Colours::white);
-        g.drawImage(homeIconImg, bounds.toFloat(), 
-                   juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize);
-    }
-    
-    if (kitBuilderIconImg.isValid())
-    {
-        auto bounds = tabKitBuilder.getBounds();
-        g.setColour(juce::Colours::white);
-        g.drawImage(kitBuilderIconImg, bounds.toFloat(), 
-                   juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize);
-    }
-    
-    if (mixerIconImg.isValid())
-    {
-        auto bounds = tabMixer.getBounds();
-        g.setColour(juce::Colours::white);
-        g.drawImage(mixerIconImg, bounds.toFloat(), 
-                   juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize);
-    }
-    
-    if (triggerIconImg.isValid())
-    {
-        auto bounds = tabTrigger.getBounds();
-        g.setColour(juce::Colours::white);
-        g.drawImage(triggerIconImg, bounds.toFloat(), 
-                   juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize);
-    }
-    
-    if (settingsIconImg.isValid())
-    {
-        auto bounds = tabSettings.getBounds();
-        g.setColour(juce::Colours::white);
-        g.drawImage(settingsIconImg, bounds.toFloat(), 
-                   juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize);
-    }
+    // Icons are drawn by DrawableButton components
     
     if (mixerSlideAmount > 0.001f)
     {
@@ -327,10 +245,9 @@ juce::String DrumTechEditor::activeTabContextTitle() const
     switch (activeTab)
     {
         case 0:  return "Home";
-        case 1:  return "Kit Builder";
+        case 1:  return "Kit";
         case 2:  return "Mixer";
-        case 3:  return "Trigger";
-        case 4:  return "Settings";
+        case 3:  return "Sequencer";
         default: return {};
     }
 }
@@ -357,8 +274,8 @@ void DrumTechEditor::paintInstrumentBar(juce::Graphics& g, juce::Rectangle<int> 
 void DrumTechEditor::paintTabBar(juce::Graphics& g, juce::Rectangle<int>)
 {
     // Draw active tab indicator (cyan underline) for the selected icon
-    juce::TextButton* tabs[] = { &tabHome, &tabKitBuilder, &tabMixer, &tabTrigger, &tabSettings };
-    if (activeTab >= 0 && activeTab < 5)
+    juce::Component* tabs[] = { &tabHome, &tabKit, &tabMixer, &tabSequencer };
+    if (activeTab >= 0 && activeTab < 4)
     {
         auto tb = tabs[activeTab]->getBounds();
         g.setColour(juce::Colour(PluginColors::accent));
@@ -378,51 +295,43 @@ void DrumTechEditor::resized()
     
     auto topBar = area.removeFromTop(topBarHeight);
     
-    // Calculate total width needed for 5 icons with gaps
-    int totalIconWidth = (iconSize * 5) + (iconGap * 4);
+    // Calculate total width needed for 4 icons with gaps
+    int totalIconWidth = (iconSize * 4) + (iconGap * 3);
     int startX = (topBar.getWidth() - totalIconWidth) / 2;
     int iconY = (topBarHeight - iconSize) / 2;
     
-    // Position 5 icon buttons horizontally and centered
+    // Position 4 icon buttons horizontally and centered
     tabHome.setBounds(startX, iconY, iconSize, iconSize);
     tabHome.setVisible(true);
     tabHome.toFront(true);
     
-    tabKitBuilder.setBounds(startX + (iconSize + iconGap), iconY, iconSize, iconSize);
-    tabKitBuilder.setVisible(true);
-    tabKitBuilder.toFront(true);
+    tabKit.setBounds(startX + (iconSize + iconGap), iconY, iconSize, iconSize);
+    tabKit.setVisible(true);
+    tabKit.toFront(true);
     
     tabMixer.setBounds(startX + (iconSize + iconGap) * 2, iconY, iconSize, iconSize);
     tabMixer.setVisible(true);
     tabMixer.toFront(true);
     
-    tabTrigger.setBounds(startX + (iconSize + iconGap) * 3, iconY, iconSize, iconSize);
-    tabTrigger.setVisible(true);
-    tabTrigger.toFront(true);
-    
-    tabSettings.setBounds(startX + (iconSize + iconGap) * 4, iconY, iconSize, iconSize);
-    tabSettings.setVisible(true);
-    tabSettings.toFront(true);
+    tabSequencer.setBounds(startX + (iconSize + iconGap) * 3, iconY, iconSize, iconSize);
+    tabSequencer.setVisible(true);
+    tabSequencer.toFront(true);
     
     // Ensure tab buttons are on top of everything
     tabHome.toFront(false);
-    tabKitBuilder.toFront(false);
+    tabKit.toFront(false);
     tabMixer.toFront(false);
-    tabTrigger.toFront(false);
-    tabSettings.toFront(false);
+    tabSequencer.toFront(false);
     
     // Hide old controls that were on the side
     kitSelectorBtn.setVisible(false);
     kitLockBtn.setVisible(false);
     themeModeBtn.setVisible(false);
-    grooveTimeline.setVisible(false);
     transportBar.setVisible(false);
-    grooveBrowser.setVisible(false);
 
-    // Layout all content views to fill the remaining area
+    // Layout content views
     kitView.setBounds(area);
-    settingsView.setBounds(area);
-    triggerView.setBounds(area);
+    stepSequencer.setBounds(area);
 
     // Mixer slides in from the right
     const int mixerW = juce::jlimit(640, area.getWidth() - 120, static_cast<int>(area.getWidth() * 0.72f));
@@ -457,9 +366,7 @@ void DrumTechEditor::switchTab(int tab)
     
     // Hide all views first
     kitView.setVisible(false);
-    settingsView.setVisible(false);
-    triggerView.setVisible(false);
-    grooveBrowser.setVisible(false);
+    stepSequencer.setVisible(false);
     
     // Show the selected view
     switch (activeTab)
@@ -482,14 +389,8 @@ void DrumTechEditor::switchTab(int tab)
             mixerSlideTarget = 1.0f;   // Slide mixer in
             break;
             
-        case 3:  // Trigger - show trigger view
-            triggerView.setVisible(true);
-            kitBuilderSlideTarget = 0.0f;
-            mixerSlideTarget = 0.0f;
-            break;
-            
-        case 4:  // Settings - show settings view
-            settingsView.setVisible(true);
+        case 3:  // Sequencer - show step sequencer
+            stepSequencer.setVisible(true);
             kitBuilderSlideTarget = 0.0f;
             mixerSlideTarget = 0.0f;
             break;
